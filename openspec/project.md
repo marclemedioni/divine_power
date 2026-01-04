@@ -15,10 +15,27 @@ Divine Power is a Path of Exile trading assistant application designed to help p
 - **Framework**: Angular 21 with AnalogJS (SSR/SSG framework for Angular)
 - **Build Tool**: Vite 7 with Nx 22.3.3 monorepo
 - **Backend**: tRPC v11 for type-safe API with Zod validation
+- **Database**: PostgreSQL (Docker) with Prisma ORM
 - **Styling**: Tailwind CSS 4 with PostCSS
 - **Language**: TypeScript 5.9
 - **Testing**: Vitest (unit), Playwright (e2e)
 - **External API**: poe.ninja for market data
+
+## Trading Strategies
+
+### Divine Flip Strategy
+
+Buy items below market value and sell at market rate. Target high-volume items where price inefficiencies exist.
+
+### Triangular Arbitrage Strategy
+
+Exploit rate discrepancies between three currencies: **Divine Orb ↔ Item ↔ Chaos/Exalted Orb**. The cycle involves:
+
+1. Convert currency X to an item
+2. Sell item for currency Y
+3. Convert Y back to X at a profit
+
+Supported currency pairs: Divine, Chaos, Exalted Orbs.
 
 ## Project Conventions
 
