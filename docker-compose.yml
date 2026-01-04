@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16
+    container_name: divine_power_db
+    environment:
+      POSTGRES_USER: divine
+      POSTGRES_PASSWORD: power
+      POSTGRES_DB: divine_power
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U divine -d divine_power']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum Currency {
+  DIVINE
+  CHAOS
+  EXALTED
+}
+
+enum OrderType {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  PENDING
+  EXECUTED
+  CANCELLED
+}
+
+// ============================================================================
+// MARKET DATA
+// ============================================================================
+
+// Market data from poe.ninja
+model MarketItem {
+  id          String   @id @default(cuid())
+  externalId  String   @unique // poe.ninja item ID (e.g., "omen-of-whittling")
+  name        String
+  category    String
+  imageUrl    String?
+
+  // Current prices (rate = how many of this currency for 1 item)
+  divineRate  Decimal? @db.Decimal(18, 8)
+  chaosRate   Decimal? @db.Decimal(18, 8)
+  exaltedRate Decimal? @db.Decimal(18, 8)
+
+  // Volume (24h trading volume in primary currency value)
+  volume24h   Decimal? @db.Decimal(18, 2)
+
+  // Timestamps
+  lastSync    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  priceHistory PriceHistory[]
+  vaultItems   VaultItem[]
+  orders       TradeOrder[]
+  trades       Trade[]
+
+  @@index([category])
+  @@index([name])
+}
+
+// Historical prices for trend analysis
+model PriceHistory {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      MarketItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  timestamp DateTime
+  rate      Decimal  @db.Decimal(18, 8)
+  currency  Currency
+  volume    Decimal? @db.Decimal(18, 2)
+
+  createdAt DateTime @default(now())
+
+  @@unique([itemId, timestamp, currency])
+  @@index([itemId, currency])
+  @@index([timestamp])
+}
+
+// ============================================================================
+// WALLET (Currency Holdings)
+// ============================================================================
+
+model Wallet {
+  id        String   @id @default(cuid())
+  currency  Currency @unique
+  balance   Decimal  @db.Decimal(18, 8) @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================================
+// VAULT (Trading Inventory)
+// ============================================================================
+
+model VaultItem {
+  id           String   @id @default(cuid())
+  itemId       String
+  item         MarketItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  
+  quantity     Int
+  costBasis    Decimal  @db.Decimal(18, 8) // Price paid per unit
+  costCurrency Currency
+  
+  acquiredAt   DateTime @default(now())
+  notes        String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([itemId])
+}
+
+// ============================================================================
+// TRADING
+// ============================================================================
+
+// Pending trade orders
+model TradeOrder {
+  id          String      @id @default(cuid())
+  itemId      String
+  item        MarketItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  type        OrderType
+  quantity    Int
+  targetPrice Decimal     @db.Decimal(18, 8)
+  currency    Currency
+
+  status      OrderStatus @default(PENDING)
+
+  createdAt   DateTime    @default(now())
+  executedAt  DateTime?
+  cancelledAt DateTime?
+
+  // When executed, links to the actual trade
+  trade       Trade?
+
+  @@index([status])
+  @@index([itemId])
+}
+
+// Executed trades (history)
+model Trade {
+  id          String     @id @default(cuid())
+  itemId      String
+  item        MarketItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  type        OrderType
+  quantity    Int
+  price       Decimal    @db.Decimal(18, 8)
+  currency    Currency
+
+  // Optional link to original order
+  orderId     String?    @unique
+  order       TradeOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  executedAt  DateTime   @default(now())
+  notes       String?
+
+  createdAt   DateTime   @default(now())
+
+  @@index([itemId])
+  @@index([executedAt])
+}
+
+// ============================================================================
+// SYNC STATUS
+// ============================================================================
+
+model SyncStatus {
+  id          String   @id @default(cuid())
+  lastSync    DateTime @default(now())
+  itemCount   Int      @default(0)
+  status      String   @default("idle") // idle, syncing, error
+  errorMsg    String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
