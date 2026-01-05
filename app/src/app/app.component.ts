@@ -120,27 +120,36 @@ import { NotificationService } from './services/notification.service';
 
       <!-- Toasts Overlay -->
       <div class="fixed top-6 right-6 z-[100] space-y-3 pointer-events-none">
-        <div *ngFor="let t of notify.toasts()" 
-             class="pointer-events-auto rich-panel p-4 rounded-xl flex items-start gap-3 w-80 animate-in slide-in-from-right fade-in duration-300 ring-1 ring-white/10">
-          <div class="mt-0.5">
-            <span *ngIf="t.type === 'success'" class="text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
-            </span>
-            <span *ngIf="t.type === 'warning'" class="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.008v.008H12v-.008Z" /></svg>
-            </span>
-            <span *ngIf="t.type === 'error'" class="text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.5)]">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
-            </span>
-            <span *ngIf="t.type === 'info'" class="text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]">
-               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
-            </span>
+        @for (t of notify.toasts(); track t) {
+          <div class="pointer-events-auto rich-panel p-4 rounded-xl flex items-start gap-3 w-80 animate-in slide-in-from-right fade-in duration-300 ring-1 ring-white/10">
+            <div class="mt-0.5">
+              @if (t.type === 'success') {
+                <span class="text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                </span>
+              }
+              @if (t.type === 'warning') {
+                <span class="text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.008v.008H12v-.008Z" /></svg>
+                </span>
+              }
+              @if (t.type === 'error') {
+                <span class="text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.5)]">
+                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" /></svg>
+                </span>
+              }
+              @if (t.type === 'info') {
+                <span class="text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]">
+                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                </span>
+              }
+            </div>
+            <div>
+              <div class="text-sm font-bold text-white tracking-wide">{{ t.title }}</div>
+              <div class="text-xs text-zinc-400 mt-1 font-medium leading-relaxed">{{ t.message }}</div>
+            </div>
           </div>
-          <div>
-            <div class="text-sm font-bold text-white tracking-wide">{{ t.title }}</div>
-            <div class="text-xs text-zinc-400 mt-1 font-medium leading-relaxed">{{ t.message }}</div>
-          </div>
-        </div>
+        }
       </div>
     </div>
   `,

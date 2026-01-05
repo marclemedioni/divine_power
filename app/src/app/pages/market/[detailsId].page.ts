@@ -1,6 +1,6 @@
 
-import { Component, inject, resource, computed, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, resource, computed, signal, effect, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { TRPC_CLIENT } from '../../trpc.token';
@@ -23,13 +23,17 @@ import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/
       </a>
 
       <!-- Loading / Error -->
-      <div *ngIf="detailsResource.isLoading()" class="flex justify-center py-20">
-        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      @if (detailsResource.isLoading()) {
+        <div class="flex justify-center py-20">
+          <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      }
 
-      <div *ngIf="detailsResource.error() as err" class="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl">
-        Error loading item details: {{ err }}
-      </div>
+      @if (detailsResource.error(); as err) {
+        <div class="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl">
+          Error loading item details: {{ err }}
+        </div>
+      }
 
       @if (detailsResource.value(); as item) {
         <!-- Header -->
@@ -38,8 +42,11 @@ import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/
           
           <div class="relative z-10 flex items-center justify-between">
             <div class="flex items-center gap-6">
-               <div class="w-24 h-24 bg-zinc-950 rounded-xl border border-zinc-800 p-4 flex items-center justify-center shrink-0">
-                  <div class="text-4xl">💎</div>
+               <div class="w-24 h-24 bg-zinc-950 rounded-xl border border-zinc-800 p-1 flex items-center justify-center shrink-0">
+                  @if (item.id) {
+                    <img [src]="'/assets/poe-ninja/' + item.detailsId + '.png'" [alt]="item.name" class="w-full h-full object-contain"
+                       onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                  }
                </div>
                <div>
                  <h1 class="text-4xl font-bold text-white mb-2">{{ item.name }}</h1>
@@ -75,62 +82,37 @@ import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/
               </h2>
               
               <div class="space-y-4">
-                <!-- Divine -->
-                <div class="p-4 bg-zinc-950/50 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-colors group">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-bold text-purple-400 group-hover:text-purple-300">Divine Orb</span>
-                        <span class="text-xs text-zinc-500 font-mono">24h Vol</span>
-                    </div>
-                    <div class="flex justify-between items-end">
-                        <div class="flex flex-col">
-                            <span class="text-2xl font-mono font-bold text-white">
-                                {{ getRate(item, 'divine') | number:'1.2-2' }}
-                            </span>
-                            <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Rate</span>
-                        </div>
-                        <span class="text-lg font-mono text-zinc-300">
-                            {{ getVolume(item, 'divine') | number:'1.0-0' }}
-                        </span>
-                    </div>
-                </div>
+                <!-- Iterate over currencies -->
+                <!-- Iterate over currencies -->
+                @for (currency of ['divine', 'exalted', 'chaos']; track currency) {
+                  <div
+                       (click)="selectedCurrency.set(currency)"
+                       [class.border-blue-500]="selectedCurrency() === currency"
+                       [class.bg-zinc-800]="selectedCurrency() === currency"
+                       class="p-4 bg-zinc-950/50 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-all cursor-pointer group">
+                      
+                      <div class="flex justify-between items-center mb-2">
+                          <div class="flex items-center gap-2">
+                              <img [src]="'/assets/poe-ninja/' + currency + '-orb.png'" class="w-5 h-5 object-contain">
+                              <span class="text-sm font-bold text-white capitalize">{{ currency }} Orb</span>
+                          </div>
+                          <span class="text-xs text-zinc-500 font-mono">24h Vol</span>
+                      </div>
 
-                <!-- Exalted -->
-                <div class="p-4 bg-zinc-950/50 rounded-lg border border-amber-500/20 hover:border-amber-500/40 transition-colors group">
-                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-bold text-amber-400 group-hover:text-amber-300">Exalted Orb</span>
-                        <span class="text-xs text-zinc-500 font-mono">24h Vol</span>
-                    </div>
-                    <div class="flex justify-between items-end">
-                         <div class="flex flex-col">
-                            <span class="text-2xl font-mono font-bold text-white">
-                                {{ getRate(item, 'exalted') | number:'1.0-0' }}
-                            </span>
-                             <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Rate</span>
-                        </div>
-                        <span class="text-lg font-mono text-zinc-300">
-                            {{ getVolume(item, 'exalted') | number:'1.0-0' }}
-                        </span>
-                    </div>
-                </div>
+                      <div class="flex justify-between items-end">
+                          <div class="flex flex-col">
+                              <span class="text-2xl font-mono font-bold text-white">
+                                  {{ getRate(item, currency) | number:(currency === 'chaos' ? '1.0-0' : '1.2-2') }}
+                              </span>
+                              <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Rate</span>
+                          </div>
+                          <span class="text-lg font-mono text-zinc-300">
+                              {{ getVolume(item, currency) | number:'1.0-0' }}
+                          </span>
+                      </div>
+                  </div>
+                }
 
-                <!-- Chaos -->
-                <div class="p-4 bg-zinc-950/50 rounded-lg border border-blue-500/20 hover:border-blue-500/40 transition-colors group">
-                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm font-bold text-blue-400 group-hover:text-blue-300">Chaos Orb</span>
-                        <span class="text-xs text-zinc-500 font-mono">24h Vol</span>
-                    </div>
-                    <div class="flex justify-between items-end">
-                         <div class="flex flex-col">
-                            <span class="text-2xl font-mono font-bold text-white">
-                                {{ getRate(item, 'chaos') | number:'1.0-0' }}
-                            </span>
-                             <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Rate</span>
-                        </div>
-                        <span class="text-lg font-mono text-zinc-300">
-                            {{ getVolume(item, 'chaos') | number:'1.0-0' }}
-                        </span>
-                    </div>
-                </div>
               </div>
             </div>
 
@@ -139,19 +121,39 @@ import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/
           <!-- Right Column: Chart -->
           <div class="lg:col-span-2">
             <div class="bg-zinc-900/50 rounded-xl border border-zinc-800 p-6 h-full min-h-[400px] flex flex-col">
-               <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-zinc-500">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
-                </svg>
-                Price History (Divine)
-              </h2>
+               <div class="flex justify-between items-center mb-6">
+                   <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-zinc-500">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
+                    </svg>
+                    Price History ({{ selectedCurrency() | titlecase }})
+                  </h2>
+
+                  <!-- Tab Switcher -->
+                  <div class="flex bg-zinc-950 p-1 rounded-lg border border-zinc-800">
+                      @for (curr of ['divine', 'exalted', 'chaos']; track curr) {
+                        <button
+                                (click)="selectedCurrency.set(curr)"
+                                [class.bg-zinc-800]="selectedCurrency() === curr"
+                                [class.text-white]="selectedCurrency() === curr"
+                                [class.text-zinc-500]="selectedCurrency() !== curr"
+                                class="px-3 py-1 text-xs font-bold rounded flex items-center gap-2 transition-all">
+                            <img [src]="'/assets/poe-ninja/' + curr + '-orb.png'" class="w-4 h-4 object-contain">
+                            <span class="hidden md:inline capitalize">{{ curr }}</span>
+                        </button>
+                      }
+                  </div>
+               </div>
               
               <!-- ECharts Chart -->
-               <div class="w-full flex-1 min-h-[300px]" 
-                    echarts 
-                    [options]="chartOptions()" 
-                    [theme]="'dark'">
-               </div>
+               @if (isBrowser) {
+                <div
+                     class="w-full flex-1 min-h-[300px]" 
+                     echarts 
+                     [options]="chartOptions()" 
+                     [theme]="'dark'">
+                </div>
+               }
 
             </div>
           </div>
@@ -164,8 +166,12 @@ import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/
 export default class MarketDetailsPage {
   private route = inject(ActivatedRoute);
   private trpc = inject(TRPC_CLIENT);
+  private platformId = inject(PLATFORM_ID);
+  
+  public isBrowser = isPlatformBrowser(this.platformId);
 
   public detailsId = signal<string>('');
+  public selectedCurrency = signal<string>('divine');
 
   constructor() {
     this.route.paramMap.subscribe(params => {
@@ -188,13 +194,19 @@ export default class MarketDetailsPage {
   }
 
   getVolume(item: PoeNinjaItemDetails, currencyId: string): number {
-    return item.pairs.find(p => p.currencyId === currencyId)?.volume ?? 0;
+    const pair = item.pairs.find(p => p.currencyId === currencyId);
+    const divineRate = this.getRate(item, 'divine');
+    // Volume is always in Primary Currency (Divine).
+    // So to get items: Volume(Div) / Rate(Div/Item) = Items
+    if (!pair || !divineRate || divineRate === 0) return 0;
+    return pair.volume / divineRate;
   }
 
   // Chart Options Computed
   chartOptions = computed(() => {
     const item = this.detailsResource.value();
-    const history = item?.pairs.find(p => p.currencyId === 'divine')?.history ?? [];
+    const currency = this.selectedCurrency();
+    const history = item?.pairs.find(p => p.currencyId === currency)?.history ?? [];
     
     // Sort ascending by date
     const sortedData = [...history].sort((a, b) => 
@@ -203,6 +215,15 @@ export default class MarketDetailsPage {
 
     const dates = sortedData.map(d => new Date(d.timestamp).toLocaleDateString());
     const values = sortedData.map(d => d.rate);
+
+    // Dynamic color based on currency
+    const colors: Record<string, string> = {
+        divine: '#3b82f6', // Blue
+        exalted: '#f59e0b', // Amber/Gold
+        chaos: '#a855f7'   // Purple
+    };
+
+    const color = colors[currency] || '#3b82f6';
 
     return {
       backgroundColor: 'transparent',
@@ -213,7 +234,7 @@ export default class MarketDetailsPage {
         textStyle: { color: '#fff' },
         axisPointer: {
              type: 'cross',
-             label: { backgroundColor: '#3b82f6' }
+             label: { backgroundColor: color }
         }
       },
       grid: {
@@ -237,11 +258,11 @@ export default class MarketDetailsPage {
       },
       series: [
         {
-          name: 'Divine Price',
+          name: `${currency.charAt(0).toUpperCase() + currency.slice(1)} Price`,
           type: 'line',
           stack: 'Total',
           smooth: true,
-          lineStyle: { width: 3, color: '#3b82f6' },
+          lineStyle: { width: 3, color: color },
           showSymbol: false,
           areaStyle: {
             opacity: 0.8,
@@ -251,7 +272,7 @@ export default class MarketDetailsPage {
                 y: 0,
                 x2: 0,
                 y2: 1,
-                colorStops: [{ offset: 0, color: 'rgba(59, 130, 246, 0.5)' }, { offset: 1, color: 'rgba(59, 130, 246, 0)' }]
+                colorStops: [{ offset: 0, color: color.replace(')', ', 0.5)').replace('rgb', 'rgba') }, { offset: 1, color: 'transparent' }]
             }
           },
           emphasis: { focus: 'series' },

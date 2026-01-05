@@ -48,57 +48,83 @@ import { withTransferCache } from '../../trpc.utils';
       </div>
 
       <!-- Loading State -->
-      <div *ngIf="marketResource.isLoading() && !marketResource.value()" class="flex justify-center py-20">
-        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      @if (marketResource.isLoading() && !marketResource.value()) {
+        <div class="flex justify-center py-20">
+          <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+      }
 
       <!-- Error State -->
-      <div *ngIf="marketResource.error() as err" class="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl">
-        Error loading market data: {{ err }}
-      </div>
+      @if (marketResource.error(); as err) {
+        <div class="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl">
+          Error loading market data: {{ err }}
+        </div>
+      }
 
       <!-- Grid -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <a *ngFor="let item of filteredItems()" 
-           [routerLink]="['/market', item.detailsId]"
-           class="group bg-zinc-900/50 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-600 rounded-xl p-4 transition-all duration-200 cursor-pointer relative overflow-hidden block">
-          
-          <!-- Background Glow on Hover -->
-          <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-          
-          <div class="flex items-start justify-between relative z-10">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-zinc-950 rounded-lg border border-zinc-800 p-1 flex items-center justify-center">
-                 <img [src]="item.image" [alt]="item.name" class="w-full h-full object-contain drop-shadow-lg" loading="lazy">
-              </div>
-              <div class="flex flex-col">
-                <span class="font-bold text-white text-sm truncate max-w-[140px]">{{ item.name }}</span>
-                <span class="text-xs text-zinc-500 font-mono">{{ item.detailsId }}</span>
+        @for (item of filteredItems(); track item.detailsId) {
+          <a [routerLink]="['/market', item.detailsId]"
+             class="group bg-zinc-900/50 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-600 rounded-xl p-4 transition-all duration-200 cursor-pointer relative overflow-hidden block">
+            
+            <!-- Background Glow on Hover -->
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            
+            <div class="flex items-start justify-between relative z-10">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-zinc-950 rounded-lg border border-zinc-800 p-1 flex items-center justify-center">
+                   <img [src]="item.image" [alt]="item.name" class="w-full h-full object-contain drop-shadow-lg" loading="lazy">
+                </div>
+                <div class="flex flex-col">
+                  <span class="font-bold text-white text-sm truncate max-w-[140px]">{{ item.name }}</span>
+                  <span class="text-xs text-zinc-500 font-mono">{{ item.detailsId }}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="mt-4 pt-4 border-t border-zinc-800 relative z-10 grid grid-cols-2 gap-4">
-            <div>
-               <div class="text-[10px] uppercase font-bold text-zinc-600 tracking-wider mb-1">Price</div>
-               <div class="text-lg font-mono font-bold text-blue-400">
-                 {{ item.primaryValue | number:'1.2-2' }} <span class="text-xs text-zinc-500 font-sans font-normal">div</span>
+            <div class="mt-4 pt-4 border-t border-zinc-800 relative z-10">
+              <!-- Price Display -->
+               <div class="flex justify-between items-baseline mb-3">
+                 <div class="text-[10px] uppercase font-bold text-zinc-600 tracking-wider">Price</div>
+                 <div class="text-lg font-mono font-bold text-blue-400">
+                   {{ item.primaryValue | number:'1.2-2' }} <span class="text-xs text-zinc-500 font-sans font-normal">div</span>
+                 </div>
+               </div>
+
+               <!-- Volumes Per Pair -->
+               <div class="grid grid-cols-3 gap-2 border-t border-zinc-800/50 pt-2">
+                   @for (currency of ['divine', 'exalted', 'chaos']; track currency) {
+                     <div class="text-center">
+                        <div class="flex justify-center mb-1">
+                            <img [src]="'/assets/poe-ninja/' + currency + '-orb.png'" 
+                                 [alt]="currency" 
+                                 class="w-4 h-4 object-contain"
+                                 [title]="currency">
+                        </div>
+                        
+                        @if (getPairVolume(item, currency); as vol) {
+                          <div class="text-xs font-mono text-zinc-300" 
+                               [title]="'Volume in ' + currency">
+                               {{ vol | number:'1.0-0' }}
+                          </div>
+                        }
+                        @if (!getPairVolume(item, currency)) {
+                          <div class="text-xs font-mono text-zinc-700">-</div>
+                        }
+                     </div>
+                   }
                </div>
             </div>
-            <div class="text-right">
-               <div class="text-[10px] uppercase font-bold text-zinc-600 tracking-wider mb-1">Vol (24h)</div>
-               <div class="text-lg font-mono font-bold text-zinc-300">
-                 {{ item.volumePrimaryValue | number:'1.0-0' }}
-               </div>
-            </div>
-          </div>
-        </a>
+          </a>
+        }
       </div>
       
       <!-- Empty State -->
-      <div *ngIf="filteredItems().length === 0 && marketResource.value()" class="text-center py-20 text-zinc-500">
-         No currency found matching "{{ searchQuery() }}"
-      </div>
+      @if (filteredItems().length === 0 && marketResource.value()) {
+        <div class="text-center py-20 text-zinc-500">
+           No currency found matching "{{ searchQuery() }}"
+        </div>
+      }
 
     </div>
   `,
@@ -107,7 +133,6 @@ export default class MarketPage {
   private trpc = inject(TRPC_CLIENT);
   
   public searchQuery = signal('');
-
 
   public marketResource = resource({
     loader: withTransferCache('market-overview', () => 
@@ -128,6 +153,15 @@ export default class MarketPage {
         item.detailsId.toLowerCase().includes(query)
     );
   });
+
+  // Calculate volume in ITEMS (Volume / Rate)
+  getPairVolume(item: any, currencyId: string): number | null {
+      const pair = item.pairs?.find((p: any) => p.currencyId === currencyId);
+      // Volume is always in Primary Currency (Divine).
+      // So to get items: Volume(Div) / Rate(Div/Item) = Items
+      if (!pair || !item.primaryValue || item.primaryValue === 0) return null;
+      return pair.volume / item.primaryValue;
+  }
 
   async refresh() {
     if (this.isUpdating()) return;

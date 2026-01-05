@@ -11,6 +11,11 @@ export interface PoeNinjaItemOverview {
   image?: string;
   primaryValue: number; // Value in divine? Check API. usually relative to primary currency
   volumePrimaryValue: number; // Total volume?
+  pairs: Array<{
+    currencyId: string;
+    rate: number;
+    volume: number;
+  }>;
 }
 
 export interface PoeNinjaPairData {
@@ -27,6 +32,7 @@ export interface PoeNinjaPairData {
 export interface PoeNinjaItemDetails {
   id: string;
   name: string;
+  detailsId: string;
   pairs: PoeNinjaPairData[];
 }
 
@@ -171,7 +177,10 @@ export class PoeNinjaService {
 
   async getCurrencyOverview(): Promise<PoeNinjaItemOverview[]> {
     const items = await prisma.marketItem.findMany({
-        orderBy: { volumePrimaryValue: 'desc' }
+        orderBy: { volumePrimaryValue: 'desc' },
+        include: {
+            pairs: true
+        }
     });
     return items.map(item => ({
         id: item.id,
@@ -179,7 +188,12 @@ export class PoeNinjaService {
         detailsId: item.detailsId,
         image: item.image ?? undefined,
         primaryValue: item.primaryValue,
-        volumePrimaryValue: item.volumePrimaryValue
+        volumePrimaryValue: item.volumePrimaryValue,
+        pairs: item.pairs.map(p => ({
+            currencyId: p.currencyId,
+            rate: p.rate,
+            volume: p.volume
+        }))
     }));
   }
 
@@ -202,6 +216,7 @@ export class PoeNinjaService {
      return {
          id: item.id,
          name: item.name,
+         detailsId: item.detailsId,
          pairs: item.pairs.map(p => ({
              currencyId: p.currencyId,
              rate: p.rate,
@@ -237,6 +252,7 @@ export class PoeNinjaService {
           image: info.image ? 'https://web.poecdn.com' + info.image : undefined,
           primaryValue: line.primaryValue,
           volumePrimaryValue: line.volumePrimaryValue,
+          pairs: []
         });
       }
     }
@@ -256,6 +272,7 @@ export class PoeNinjaService {
     return {
       id: data.item.id,
       name: data.item.name,
+      detailsId: detailsId,
       pairs: data.pairs.map(p => ({
         currencyId: p.id,
         rate: p.rate ?? 0,
