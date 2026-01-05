@@ -57,39 +57,6 @@ export const walletRouter = router({
     }),
 
   /**
-   * Add/subtract from a currency balance
-   */
-  adjustBalance: publicProcedure
-    .input(
-      z.object({
-        currency: CurrencySchema,
-        amount: z.number(), // Can be negative for subtraction
-      })
-    )
-    .mutation(async ({ input }) => {
-      // First get current balance
-      const current = await prisma.wallet.findUnique({
-        where: { currency: input.currency },
-      });
-
-      const currentBalance = current?.balance ? Number(current.balance) : 0;
-      const newBalance = Math.max(0, currentBalance + input.amount);
-
-      const wallet = await prisma.wallet.upsert({
-        where: { currency: input.currency },
-        create: {
-          currency: input.currency,
-          balance: newBalance,
-        },
-        update: {
-          balance: newBalance,
-        },
-      });
-
-      return wallet;
-    }),
-
-  /**
    * Get net worth in primary currency (Divine)
    * Converts all currencies to Divine using current exchange rates
    */
@@ -128,13 +95,20 @@ export const walletRouter = router({
       }
     }
 
+    // Ensure we have entries for all supported currencies
+    const supportedCurrencies = ['DIVINE', 'CHAOS', 'EXALTED'] as const;
+    const normalizedBalances = supportedCurrencies.map(currency => {
+      const found = balances.find(b => b.currency === currency);
+      return {
+        currency,
+        balance: found ? Number(found.balance) : 0,
+      };
+    });
+
     return {
       netWorth: netWorthInDivine,
       currency: 'DIVINE' as const,
-      breakdown: balances.map((w) => ({
-        currency: w.currency,
-        balance: Number(w.balance),
-      })),
+      breakdown: normalizedBalances,
       exchangeRates: {
         chaosPerDivine,
         exaltedPerDivine,
