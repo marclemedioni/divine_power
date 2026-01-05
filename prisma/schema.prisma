@@ -40,6 +40,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   wallet    Wallet?
+  orders    Order[]
 }
 
 model Wallet {
@@ -49,6 +50,8 @@ model Wallet {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   balances  Balance[]
+  inventory Inventory[]
+  lots      InventoryLot[]
 }
 
 
@@ -68,10 +71,14 @@ model MarketItem {
   name               String
   detailsId          String       @unique // e.g. "orb-of-alchemy"
   image              String?
+  category           String       @default("Currency")
   primaryValue       Float
   volumePrimaryValue Float
   updatedAt          DateTime     @updatedAt
   pairs              MarketPair[]
+  orders             Order[]
+  inventory          Inventory[]
+  lots               InventoryLot[]
 }
 
 model MarketPair {
@@ -95,4 +102,61 @@ model MarketHistory {
   volume       Float
 
   @@index([marketPairId, timestamp])
+}
+
+model Inventory {
+  id           String     @id @default(uuid())
+  walletId     String
+  wallet       Wallet     @relation(fields: [walletId], references: [id])
+  marketItemId String
+  marketItem   MarketItem @relation(fields: [marketItemId], references: [id])
+  quantity     Int        @default(0)
+
+  @@unique([walletId, marketItemId])
+}
+
+model Order {
+  id                    String      @id @default(uuid())
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id])
+  
+  marketItemId          String
+  marketItem            MarketItem  @relation(fields: [marketItemId], references: [id])
+  
+  type                  OrderType
+  status                OrderStatus @default(PENDING)
+  
+  currency              Currency // Payment currency (usually DIVINE)
+  pricePerUnit          Float
+  quantity              Int
+  
+  fulfilledQuantity     Int?
+  fulfilledPricePerUnit Float?
+  
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  
+  lots                  InventoryLot[]
+}
+
+model InventoryLot {
+  id              String     @id @default(uuid())
+  walletId        String
+  wallet          Wallet     @relation(fields: [walletId], references: [id])
+  marketItemId    String
+  marketItem      MarketItem @relation(fields: [marketItemId], references: [id])
+  
+  // Lot details
+  quantity        Int        @default(0)
+  purchasePrice   Float      // Price per unit paid for this lot
+  purchasedAt     DateTime   @default(now())
+  
+  // Optional: link to the order that created this lot
+  orderId         String?
+  order           Order?     @relation(fields: [orderId], references: [id])
+  
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  @@index([walletId, marketItemId])
 }

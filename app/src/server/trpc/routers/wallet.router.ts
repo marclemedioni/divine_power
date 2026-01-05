@@ -7,27 +7,56 @@ export const walletRouter = router({
     // Single user mode: Ensure a default user exists
     let user = await prisma.user.findUnique({
       where: { email: 'default@user.com' },
-      include: { wallet: { include: { balances: true } } }
+      include: { 
+        wallet: { 
+          include: { 
+            balances: true, 
+            inventory: { 
+              include: { 
+                marketItem: true 
+              } 
+            } 
+          } 
+        } 
+      }
     });
 
     if (!user) {
-      user = await prisma.user.create({
+      const newUser = await prisma.user.create({
         data: {
           email: 'default@user.com',
           name: 'Divine Exile',
-          wallet: {
-            create: {
-              balances: {
-                create: [
-                  { currency: Currency.DIVINE, amount: 0 },
-                  { currency: Currency.CHAOS, amount: 0 },
-                  { currency: Currency.EXALTED, amount: 0 },
-                ],
-              },
-            },
-          },
-        },
-        include: { wallet: { include: { balances: true } } }
+        }
+      });
+
+      const newWallet = await prisma.wallet.create({
+        data: {
+          userId: newUser.id
+        }
+      });
+
+      await prisma.balance.createMany({
+        data: [
+          { walletId: newWallet.id, currency: Currency.DIVINE, amount: 0 },
+          { walletId: newWallet.id, currency: Currency.CHAOS, amount: 0 },
+          { walletId: newWallet.id, currency: Currency.EXALTED, amount: 0 },
+        ]
+      });
+
+      user = await prisma.user.findUniqueOrThrow({
+        where: { id: newUser.id },
+        include: { 
+          wallet: { 
+            include: { 
+              balances: true, 
+              inventory: { 
+                include: { 
+                  marketItem: true 
+                } 
+              } 
+            } 
+          } 
+        }
       });
     }
 
@@ -47,21 +76,8 @@ export const walletRouter = router({
          include: { wallet: true }
       });
 
-      if (!user) {
-         // Should normally be handled by query first, but safe to have fallback or error
-         // For simplicity, re-create or error. Let's error if basic setup isn't done, 
-         // but actually fetching wallet first initiates it.
-         throw new Error("User/Wallet not initialized. Call getWallet first.");
-      }
-
-      if (!user.wallet) {
-         // Edge case fix
-          await prisma.wallet.create({
-            data: { 
-                userId: user.id,
-                balances: { create: [] }
-            }
-          });
+      if (!user || !user.wallet) {
+          throw new Error("User/Wallet not initialized. Call getWallet first.");
       }
 
       const wallet = await prisma.wallet.findUniqueOrThrow({
@@ -86,5 +102,28 @@ export const walletRouter = router({
       });
 
       return updatedBalance;
+    }),
+
+  getInventoryLots: publicProcedure
+    .input(z.object({ marketItemId: z.string().optional() }))
+    .query(async ({ input }) => {
+      const user = await prisma.user.findUnique({
+        where: { email: 'default@user.com' },
+        include: { wallet: true }
+      });
+      
+      if (!user?.wallet) {
+        throw new Error('Wallet not found');
+      }
+      
+      return await prisma.inventoryLot.findMany({
+        where: {
+          walletId: user.wallet.id,
+          ...(input.marketItemId ? { marketItemId: input.marketItemId } : {}),
+          quantity: { gt: 0 }
+        },
+        include: { marketItem: true },
+        orderBy: { purchasedAt: 'asc' } // FIFO order
+      });
     }),
 });

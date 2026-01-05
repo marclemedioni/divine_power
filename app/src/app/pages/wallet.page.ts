@@ -210,14 +210,14 @@ export default class WalletPage {
   });
 
   private getBalance(currency: Currency): number {
-    const wallet = this.walletResource.value();
-    return wallet?.balances.find(b => b.currency === currency)?.amount ?? 0;
+    const wallet = this.walletResource.value() as any;
+    return wallet?.balances?.find((b: any) => b.currency === currency)?.amount ?? 0;
   }
 
   private getPriceInRange(detailsId: string): number | null {
-      const market = this.marketResource.value();
+      const market = this.marketResource.value() as any[];
       if (!market) return null;
-      const item = market.find(i => i.detailsId === detailsId);
+      const item = market.find((i: any) => i.detailsId === detailsId);
       // Ensure we have a valid primary value (Value in Divine)
       return item?.primaryValue ?? null;
   }

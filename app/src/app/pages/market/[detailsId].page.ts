@@ -6,11 +6,12 @@ import { NgxEchartsDirective } from 'ngx-echarts';
 import { TRPC_CLIENT } from '../../trpc.token';
 import { withTransferCache } from '../../trpc.utils';
 import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/poe-ninja.service';
+import { CreateOrderComponent } from '../../components/create-order.component';
 
 @Component({
   selector: 'app-market-details',
   standalone: true,
-  imports: [CommonModule, RouterLink, NgxEchartsDirective],
+  imports: [CommonModule, RouterLink, NgxEchartsDirective, CreateOrderComponent],
   template: `
     <div class="space-y-8 animate-in fade-in duration-700 p-8 min-h-screen">
       
@@ -36,6 +37,7 @@ import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/
       }
 
       @if (detailsResource.value(); as item) {
+        @let castedItem = $any(item);
         <!-- Header -->
         <div class="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-8 relative overflow-hidden">
           <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-transparent"></div>
@@ -43,29 +45,50 @@ import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/
           <div class="relative z-10 flex items-center justify-between">
             <div class="flex items-center gap-6">
                <div class="w-24 h-24 bg-zinc-950 rounded-xl border border-zinc-800 p-1 flex items-center justify-center shrink-0">
-                  @if (item.id) {
-                    <img [src]="'/assets/poe-ninja/' + item.detailsId + '.png'" [alt]="item.name" class="w-full h-full object-contain"
+                  @if (castedItem.id) {
+                    <img [src]="'/assets/poe-ninja/' + castedItem.detailsId + '.png'" [alt]="castedItem.name" class="w-full h-full object-contain"
                        onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                   }
                </div>
                <div>
-                 <h1 class="text-4xl font-bold text-white mb-2">{{ item.name }}</h1>
+                 <h1 class="text-4xl font-bold text-white mb-2">{{ castedItem.name }}</h1>
                  <div class="flex items-center gap-3 text-zinc-400">
-                    <span class="px-2 py-1 bg-zinc-800 rounded text-xs uppercase font-bold tracking-wider">Currency</span>
+                    <span class="px-2 py-1 bg-zinc-800 rounded text-xs uppercase font-bold tracking-wider">{{ castedItem.category }}</span>
                     <span class="text-zinc-600">|</span>
-                    <span class="font-mono text-sm">{{ item.id }}</span>
+                    <span class="font-mono text-sm">{{ castedItem.id }}</span>
                  </div>
                </div>
             </div>
 
-            <div class="text-right">
-              <div class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-1">Current Price (Divine)</div>
-              <div class="text-5xl font-mono font-bold text-blue-400">
-                {{ getRate(item, 'divine') | number:'1.1-2' }}
+            <div class="text-right flex flex-col items-end gap-3">
+              <div>
+                <div class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-1">Current Price (Divine)</div>
+                <div class="text-5xl font-mono font-bold text-blue-400">
+                  {{ getRate(castedItem, 'divine') | number:'1.1-2' }}
+                </div>
               </div>
+              
+              <button 
+                (click)="isTradeModalOpen.set(true)"
+                class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-all shadow-lg hover:shadow-blue-500/20 flex items-center gap-2 text-sm uppercase tracking-wider">
+                  <span>Trade Strategy</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                    <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd" />
+                  </svg>
+              </button>
             </div>
           </div>
         </div>
+
+        <!-- Order Modal -->
+        @if (isTradeModalOpen()) {
+            <app-create-order 
+                [marketItem]="castedItem" 
+                (close)="isTradeModalOpen.set(false)"
+                (created)="onOrderCreated()"
+            />
+        }
 
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -172,6 +195,12 @@ export default class MarketDetailsPage {
 
   public detailsId = signal<string>('');
   public selectedCurrency = signal<string>('divine');
+  public isTradeModalOpen = signal(false);
+
+  onOrderCreated() {
+      this.detailsResource.reload();
+      console.log('Order created & Price Refreshed');
+  }
 
   constructor() {
     this.route.paramMap.subscribe(params => {
@@ -189,24 +218,24 @@ export default class MarketDetailsPage {
   });
 
   // Helpers
-  getRate(item: PoeNinjaItemDetails, currencyId: string): number {
-    return item.pairs.find(p => p.currencyId === currencyId)?.rate ?? 0;
+  getRate(item: any, currencyId: string): number {
+    const casted = item as PoeNinjaItemDetails;
+    return casted.pairs?.find(p => p.currencyId === currencyId)?.rate ?? 0;
   }
 
-  getVolume(item: PoeNinjaItemDetails, currencyId: string): number {
-    const pair = item.pairs.find(p => p.currencyId === currencyId);
-    const divineRate = this.getRate(item, 'divine');
-    // Volume is always in Primary Currency (Divine).
-    // So to get items: Volume(Div) / Rate(Div/Item) = Items
+  getVolume(item: any, currencyId: string): number {
+    const casted = item as PoeNinjaItemDetails;
+    const divineRate = this.getRate(casted, 'divine');
+    const pair = casted.pairs?.find(p => p.currencyId === currencyId);
     if (!pair || !divineRate || divineRate === 0) return 0;
     return pair.volume / divineRate;
   }
 
   // Chart Options Computed
   chartOptions = computed(() => {
-    const item = this.detailsResource.value();
+    const item = this.detailsResource.value() as any as PoeNinjaItemDetails;
     const currency = this.selectedCurrency();
-    const history = item?.pairs.find(p => p.currencyId === currency)?.history ?? [];
+    const history = item?.pairs?.find(p => p.currencyId === currency)?.history ?? [];
     
     // Sort ascending by date
     const sortedData = [...history].sort((a, b) => 

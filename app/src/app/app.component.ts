@@ -104,7 +104,7 @@ import { NotificationService } from './services/notification.service';
               </div>
               <div class="flex-1 min-w-0">
                  <div class="text-xs font-semibold text-white truncate group-hover:text-blue-400 transition-colors">Divine Exile</div>
-                 <div class="text-[0.65rem] text-zinc-500">Standard League</div>
+                 <div class="text-[0.65rem] text-zinc-500">Fate of the Vaal</div>
               </div>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15 12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
