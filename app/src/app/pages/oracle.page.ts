@@ -111,7 +111,7 @@ import { trpc } from '../trpc-client';
               <div class="flex flex-col items-center justify-center min-w-[150px] gap-2">
                 <div class="text-xs text-zinc-500 uppercase font-bold tracking-widest">Confidence</div>
                 <div class="text-2xl font-black text-zinc-100">{{ s.score }}%</div>
-                <button class="w-full mt-2 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95">
+                <button (click)="openOrderModal(s)" class="w-full mt-2 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-widest rounded-lg transition-all shadow-lg shadow-blue-900/20 active:scale-95">
                   Execute Strategy
                 </button>
               </div>
@@ -156,11 +156,115 @@ import { trpc } from '../trpc-client';
           </div>
         </div>
       </div>
+      <!-- Order Creation Modal -->
+      <div *ngIf="orderModalOpen()" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" (click)="closeOrderModal()"></div>
+        <div class="relative bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl shadow-black/50">
+          <div class="p-6 border-b border-zinc-800 bg-zinc-800/20">
+            <h3 class="text-xl font-bold text-white flex items-center gap-3">
+              <span class="text-2xl">⚡</span>
+              Execute Strategy
+            </h3>
+          </div>
+
+          <div class="p-6 space-y-6" *ngIf="selectedSuggestion() as s">
+            <!-- Item Preview -->
+            <div class="flex items-center gap-4 p-4 bg-zinc-950/50 rounded-xl border border-zinc-800/50">
+              <img [src]="s.item.imageUrl" class="w-12 h-12 object-contain" *ngIf="s.item.imageUrl">
+              <div>
+                <div class="font-bold text-zinc-100">{{ s.item.name }}</div>
+                <div class="text-xs text-zinc-500 uppercase font-bold tracking-widest mt-1">Current: {{ s.currentPrice | number:'1.2-2' }} DIV</div>
+              </div>
+            </div>
+
+            <!-- Inputs -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">Target (DIV)</label>
+                <input type="number" 
+                       [ngModel]="orderTargetPrice()" 
+                       (ngModelChange)="orderTargetPrice.set($event)"
+                       class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-white font-mono focus:ring-2 focus:ring-blue-500/50 outline-none transition-all">
+              </div>
+              <div class="space-y-2">
+                 <label class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">Quantity</label>
+                 <input type="number" 
+                        [ngModel]="orderQuantity()" 
+                        (ngModelChange)="orderQuantity.set($event)"
+                        min="1"
+                        class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-3 text-white font-mono focus:ring-2 focus:ring-blue-500/50 outline-none transition-all">
+              </div>
+            </div>
+
+            <!-- Strategy -->
+            <div class="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Strategy</span>
+                <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{{ s.suggestedAction }}</span>
+              </div>
+              <div class="text-sm text-zinc-300 italic">"{{ s.reason }}"</div>
+            </div>
+          </div>
+
+          <div class="p-6 border-t border-zinc-800 bg-zinc-800/20 flex gap-3">
+             <button (click)="closeOrderModal()" 
+                     class="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold uppercase tracking-widest rounded-xl transition-all">
+               Cancel
+             </button>
+             <button (click)="confirmOrder()"
+                     [disabled]="isSubmitting()"
+                     class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2">
+               <span *ngIf="isSubmitting()" class="animate-spin">↻</span>
+               <span *ngIf="!isSubmitting()">Confirm Order</span>
+             </button>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 })
 export default class OraclePage {
   strategy = signal<'ALL' | 'DIP_HUNTER' | 'SNIPER' | 'ARBITRAGE' | 'MOMENTUM'>('ALL');
+
+  // Modal State
+  orderModalOpen = signal(false);
+  selectedSuggestion = signal<any>(null);
+  orderTargetPrice = signal(0);
+  orderQuantity = signal(1);
+  isSubmitting = signal(false);
+
+  openOrderModal(suggestion: any) {
+    this.selectedSuggestion.set(suggestion);
+    this.orderTargetPrice.set(suggestion.currentPrice);
+    this.orderQuantity.set(1);
+    this.orderModalOpen.set(true);
+  }
+
+  closeOrderModal() {
+    this.orderModalOpen.set(false);
+    this.selectedSuggestion.set(null);
+  }
+
+  async confirmOrder() {
+    const s = this.selectedSuggestion();
+    if (!s) return;
+
+    this.isSubmitting.set(true);
+    try {
+      await trpc.orders.createOrder.mutate({
+        itemId: s.item.id,
+        type: s.suggestedAction === 'SELL' ? 'SELL' : 'BUY',
+        quantity: this.orderQuantity(),
+        targetPrice: this.orderTargetPrice(),
+        currency: 'DIVINE',
+      });
+      this.closeOrderModal();
+    } catch (err) {
+      console.error('Failed to create order', err);
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
 
   strategies: { id: any; name: string }[] = [
     { id: 'ALL', name: 'All' },

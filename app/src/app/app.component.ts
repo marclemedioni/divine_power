@@ -1,6 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { NotificationService } from './services/notification.service';
+import { trpc } from './trpc-client';
 
 @Component({
   selector: 'app-root',
@@ -74,7 +76,70 @@ import { CommonModule } from '@angular/common';
       <main class="flex-1 overflow-y-auto p-8 relative">
         <router-outlet></router-outlet>
       </main>
+      <!-- Toasts Overlay -->
+      <div class="fixed top-4 right-4 z-[100] space-y-2 pointer-events-none">
+        <div *ngFor="let t of notify.toasts()" 
+             class="pointer-events-auto bg-zinc-900 border border-zinc-700 p-4 rounded-xl shadow-2xl flex items-start gap-3 w-80 animate-in slide-in-from-right fade-in duration-300">
+          <div class="mt-1">
+            <span *ngIf="t.type === 'success'" class="text-green-400">✅</span>
+            <span *ngIf="t.type === 'warning'" class="text-yellow-400">⚠️</span>
+            <span *ngIf="t.type === 'error'" class="text-red-400">🚨</span>
+            <span *ngIf="t.type === 'info'" class="text-blue-400">ℹ️</span>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-white">{{ t.title }}</div>
+            <div class="text-xs text-zinc-400 mt-1">{{ t.message }}</div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
 })
-export class AppComponent {}
+export class AppComponent {
+  private notifiedOrders = new Set<string>();
+
+  constructor(
+    public notify: NotificationService, 
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
+    if (isPlatformBrowser(this.platformId)) {
+      this.startPolling();
+      this.notify.requestPermission();
+    }
+  }
+
+  startPolling() {
+    setInterval(async () => {
+      try {
+        // Check for actionable orders
+        const actionable = await trpc.orders.getActionableOrders.query();
+        let newActionableCount = 0;
+
+        for (const order of actionable) {
+          if (!this.notifiedOrders.has(order.id)) {
+            this.notifiedOrders.add(order.id);
+            newActionableCount++;
+          }
+        }
+
+        if (newActionableCount > 0) {
+          this.notify.show(
+            'Trade Opportunity!', 
+            `${newActionableCount} orders have reached their target price.`, 
+            'success'
+          );
+        }
+
+        // Check for top Oracle suggestions (simplified: check top 1 score)
+        const suggestions = await trpc.oracle.getSuggestions.query({ limit: 1, strategy: 'ALL' });
+        if (suggestions.length > 0 && suggestions[0].score >= 90) {
+           // We might want to throttle this to avoid spamming same suggestion
+           // For now, let's just log or ignore to prevent spam unless we track it
+        }
+
+      } catch (err) {
+        console.error('Polling error', err);
+      }
+    }, 60000); // Check every minute
+  }
+}
