@@ -1,19 +1,9 @@
-import { PrismaClient, Currency } from '../../../prisma/generated/client';
+import { PrismaClient } from '../../../prisma/generated/client/client';
+import { PrismaPg } from '@prisma/adapter-pg'
 
-// Create a singleton instance of PrismaClient
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
+const connectionString = `${process.env.DATABASE_URL}`
+const adapter = new PrismaPg({ connectionString })
+const prisma = new PrismaClient({ adapter })
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: ['error'],
-  });
-
-if (typeof globalForPrisma !== 'undefined') {
-  globalForPrisma.prisma = prisma;
-}
-
-export { PrismaClient, Currency };
-export * from '../../../prisma/generated/client';
+export { prisma }
+export * from '../../../prisma/generated/client/client';

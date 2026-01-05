@@ -3,6 +3,7 @@
 import analog from '@analogjs/platform';
 import { defineConfig } from 'vite';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
+import tailwindcss from '@tailwindcss/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -19,7 +20,7 @@ export default defineConfig(({ mode }) => {
         allow: ['.'],
       },
     },
-    plugins: [analog(), nxViteTsPaths()],
+    plugins: [tailwindcss(), analog(), nxViteTsPaths()],
     test: {
       globals: true,
       environment: 'jsdom',

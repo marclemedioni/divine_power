@@ -7,22 +7,47 @@ import { prisma, type Currency } from '../db';
 
 // POE2 poe.ninja API endpoints
 const POE_NINJA_BASE_URL = 'https://poe.ninja/poe2/api/economy/exchange/current';
-const POE_NINJA_LEAGUE = import.meta.env['POE_NINJA_LEAGUE'] || 'Fate of the Vaal';
+const POE_CDN_BASE_URL = 'https://web.poecdn.com';
+const POE_NINJA_LEAGUE = (typeof process !== 'undefined' ? process.env['POE_NINJA_LEAGUE'] : undefined) || 'Fate of the Vaal';
 
 // poe.ninja API response types for overview
-interface PoeNinjaOverviewItem {
+interface PoeNinjaLine {
+  id: string;
+  primaryValue: number;
+  volumePrimaryValue?: number;
+}
+
+interface PoeNinjaItem {
   id: string;
   name: string;
-  icon: string;
+  image: string;
   category: string;
-  chaos?: number;
-  divine?: number;
-  exalted?: number;
-  listingCount?: number;
+  detailsId: string;
 }
 
 interface PoeNinjaOverviewResponse {
-  items: PoeNinjaOverviewItem[];
+  core: {
+    rates: {
+      exalted: number;
+      chaos: number;
+    };
+    primary: string;
+  };
+  lines: PoeNinjaLine[];
+  items: PoeNinjaItem[];
+}
+
+// Internal representation for syncing
+interface PoeNinjaOverviewItem {
+  id: string;
+  detailsId: string;
+  name: string;
+  icon: string;
+  category: string;
+  divine: number;
+  chaos: number;
+  exalted: number;
+  listingCount?: number;
 }
 
 // poe.ninja API response types for details
@@ -48,40 +73,10 @@ interface PoeNinjaDetailsResponse {
     detailsId: string;
   };
   pairs: PoeNinjaPricePair[];
-  core: {
-    items: any[];
-    rates: { exalted: number; chaos: number };
-    primary: string;
-    secondary: string;
-  };
 }
 
 // Categories available in POE2 poe.ninja
-const CATEGORIES = [
-  'Currency',
-  'Fragment',
-  'Essence',
-  'Rune',
-  'Omen',
-  'Gem',
-  'DivinationCard',
-  'UniqueWeapon',
-  'UniqueArmour',
-  'UniqueAccessory',
-  'UniqueFlask',
-  'UniqueJewel',
-  'Ritual',
-  'Abyss',
-  'Ultimatum',
-  'Breach',
-  'Delirium',
-  'Scarab',
-  'Map',
-  'Fossil',
-  'Resonator',
-  'Oil',
-  'Incubator',
-] as const;
+const CATEGORIES = ['Currency', 'Ritual', 'Abyss'] as const;
 
 /**
  * Map poe.ninja currency ID to our Currency enum
@@ -102,21 +97,50 @@ function mapCurrency(poeNinjaCurrency: string): Currency | null {
 /**
  * Fetch overview for a category (list of all items with basic prices)
  */
-async function fetchCategoryOverview(category: string): Promise<PoeNinjaOverviewItem[]> {
+async function fetchCategoryOverview(
+  category: string,
+): Promise<PoeNinjaOverviewItem[]> {
   try {
     const encodedLeague = encodeURIComponent(POE_NINJA_LEAGUE);
     const url = `${POE_NINJA_BASE_URL}/overview?league=${encodedLeague}&type=${category}`;
-    
+
     console.log(`Fetching category overview: ${category}`);
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       console.error(`Failed to fetch category ${category}: ${response.status}`);
       return [];
     }
 
     const data: PoeNinjaOverviewResponse = await response.json();
-    return data.items || [];
+
+    // Map items by ID for easy lookup
+    const itemMap = new Map(data.items.map((item) => [item.id, item]));
+
+    // Convert rates to numbers
+    const chaosRate = data.core.rates.chaos;
+    const exaltedRate = data.core.rates.exalted;
+
+    // Merge lines and items
+    const overviewItems: PoeNinjaOverviewItem[] = [];
+    for (const line of data.lines) {
+      const item = itemMap.get(line.id);
+      if (item) {
+        overviewItems.push({
+          id: line.id,
+          detailsId: item.detailsId,
+          name: item.name,
+          icon: item.image,
+          category: item.category,
+          divine: line.primaryValue,
+          chaos: line.primaryValue * chaosRate,
+          exalted: line.primaryValue * exaltedRate,
+          listingCount: line.volumePrimaryValue,
+        });
+      }
+    }
+
+    return overviewItems;
   } catch (error) {
     console.error(`Error fetching category ${category}:`, error);
     return [];
@@ -126,13 +150,16 @@ async function fetchCategoryOverview(category: string): Promise<PoeNinjaOverview
 /**
  * Fetch detailed price history for a specific item
  */
-async function fetchItemDetails(category: string, itemId: string): Promise<PoeNinjaDetailsResponse | null> {
+async function fetchItemDetails(
+  category: string,
+  itemId: string,
+): Promise<PoeNinjaDetailsResponse | null> {
   try {
     const encodedLeague = encodeURIComponent(POE_NINJA_LEAGUE);
     const url = `${POE_NINJA_BASE_URL}/details?league=${encodedLeague}&type=${category}&id=${itemId}`;
-    
+
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       console.error(`Failed to fetch item ${itemId}: ${response.status}`);
       return null;
@@ -148,7 +175,10 @@ async function fetchItemDetails(category: string, itemId: string): Promise<PoeNi
 /**
  * Sync all market data from poe.ninja
  */
-export async function syncMarketData(): Promise<{ itemCount: number; error?: string }> {
+export async function syncMarketData(): Promise<{
+  itemCount: number;
+  error?: string;
+}> {
   try {
     // Update sync status to "syncing"
     await prisma.syncStatus.upsert({
@@ -162,7 +192,7 @@ export async function syncMarketData(): Promise<{ itemCount: number; error?: str
     for (const category of CATEGORIES) {
       // Fetch all items in the category
       const items = await fetchCategoryOverview(category);
-      
+
       for (const item of items) {
         // Upsert the market item with basic info
         const marketItem = await prisma.marketItem.upsert({
@@ -171,7 +201,9 @@ export async function syncMarketData(): Promise<{ itemCount: number; error?: str
             externalId: item.id,
             name: item.name,
             category: category,
-            imageUrl: item.icon?.startsWith('http') ? item.icon : `https://poe.ninja${item.icon || ''}`,
+            imageUrl: item.icon?.startsWith('http')
+              ? item.icon
+              : `${POE_CDN_BASE_URL}${item.icon || ''}`,
             divineRate: item.divine ?? null,
             chaosRate: item.chaos ?? null,
             exaltedRate: item.exalted ?? null,
@@ -180,7 +212,9 @@ export async function syncMarketData(): Promise<{ itemCount: number; error?: str
           },
           update: {
             name: item.name,
-            imageUrl: item.icon?.startsWith('http') ? item.icon : `https://poe.ninja${item.icon || ''}`,
+            imageUrl: item.icon?.startsWith('http')
+              ? item.icon
+              : `${POE_CDN_BASE_URL}${item.icon || ''}`,
             divineRate: item.divine ?? null,
             chaosRate: item.chaos ?? null,
             exaltedRate: item.exalted ?? null,
@@ -190,7 +224,7 @@ export async function syncMarketData(): Promise<{ itemCount: number; error?: str
         });
 
         // Fetch detailed price history for this item
-        const details = await fetchItemDetails(category, item.id);
+        const details = await fetchItemDetails(category, item.detailsId);
         
         if (details?.pairs) {
           for (const pair of details.pairs) {
@@ -226,7 +260,7 @@ export async function syncMarketData(): Promise<{ itemCount: number; error?: str
       }
 
       // Small delay between categories to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
 
     // Update sync status to "idle"
@@ -245,7 +279,7 @@ export async function syncMarketData(): Promise<{ itemCount: number; error?: str
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Sync error:', errorMsg);
-    
+
     // Update sync status to "error"
     await prisma.syncStatus.upsert({
       where: { id: 'main' },
@@ -260,7 +294,10 @@ export async function syncMarketData(): Promise<{ itemCount: number; error?: str
 /**
  * Sync only overview data (faster, no history)
  */
-export async function syncOverviewOnly(): Promise<{ itemCount: number; error?: string }> {
+export async function syncOverviewOnly(): Promise<{
+  itemCount: number;
+  error?: string;
+}> {
   try {
     await prisma.syncStatus.upsert({
       where: { id: 'main' },
@@ -272,7 +309,7 @@ export async function syncOverviewOnly(): Promise<{ itemCount: number; error?: s
 
     for (const category of CATEGORIES) {
       const items = await fetchCategoryOverview(category);
-      
+
       for (const item of items) {
         await prisma.marketItem.upsert({
           where: { externalId: item.id },
@@ -280,7 +317,9 @@ export async function syncOverviewOnly(): Promise<{ itemCount: number; error?: s
             externalId: item.id,
             name: item.name,
             category: category,
-            imageUrl: item.icon?.startsWith('http') ? item.icon : `https://poe.ninja${item.icon || ''}`,
+            imageUrl: item.icon?.startsWith('http')
+              ? item.icon
+              : `${POE_CDN_BASE_URL}${item.icon || ''}`,
             divineRate: item.divine ?? null,
             chaosRate: item.chaos ?? null,
             exaltedRate: item.exalted ?? null,
@@ -289,7 +328,9 @@ export async function syncOverviewOnly(): Promise<{ itemCount: number; error?: s
           },
           update: {
             name: item.name,
-            imageUrl: item.icon?.startsWith('http') ? item.icon : `https://poe.ninja${item.icon || ''}`,
+            imageUrl: item.icon?.startsWith('http')
+              ? item.icon
+              : `${POE_CDN_BASE_URL}${item.icon || ''}`,
             divineRate: item.divine ?? null,
             chaosRate: item.chaos ?? null,
             exaltedRate: item.exalted ?? null,
@@ -301,7 +342,7 @@ export async function syncOverviewOnly(): Promise<{ itemCount: number; error?: s
         totalItems++;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     await prisma.syncStatus.update({
@@ -318,7 +359,7 @@ export async function syncOverviewOnly(): Promise<{ itemCount: number; error?: s
     return { itemCount: totalItems };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-    
+
     await prisma.syncStatus.upsert({
       where: { id: 'main' },
       create: { id: 'main', status: 'error', errorMsg },

@@ -2,12 +2,11 @@ import { createTRPCProxyClient, httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '../server/trpc/routers/app.router'; // Import type only!
 
 function getBaseUrl() {
-  if (typeof window !== 'undefined') {
-    // Browser: use relative URL
-    return '';
-  }
-  // SSR: use localhost (Vite dev server default port)
-  return 'http://localhost:4200';
+  if (typeof window !== 'undefined') return '';
+  const proc = (globalThis as any).process;
+  if (proc?.env?.['VERCEL_URL']) return `https://${proc.env['VERCEL_URL']}`;
+  // Use 127.0.0.1 for Node.js fetch reliability during SSR
+  return 'http://127.0.0.1:4200';
 }
 
 export const trpc = createTRPCProxyClient<AppRouter>({
