@@ -1,0 +1,27 @@
+# Tasks: Enhance Wallet Management
+
+- [ ] **Spec**: Finalize Exchange and Transaction capabilities logic [/]
+- [ ] **Backend**: Implement `wallet.exchange` mutation
+  - [ ] Create Zod schema for exchange input
+  - [ ] Implement transactional update logic in `wallet.router.ts`
+  - [ ] Add unit tests for insufficient funds and zero amounts
+- [ ] **Frontend**: Create `TransactionModalComponent`
+  - [ ] Scaffold component with Inputs: `mode` ('deposit' | 'withdraw' | 'update'), `currency`, `currentBalance`
+  - [ ] Implement UI with amount input and validation
+  - [ ] Connect "Confirm" action to `trpc.wallet.updateBalance` or `trpc.wallet.adjustBalance`
+- [ ] **Frontend**: Create `ExchangeModalComponent`
+  - [ ] Scaffold component with Inputs: `balances`, `exchangeRates`
+  - [ ] Implement "From" and "To" currency selection logic (prevent same currency)
+  - [ ] Implement Rate input (default to market rate, editable)
+  - [ ] Implement "You Pay" / "You Receive" calculation logic
+  - [ ] Connect "Exchange" action to `trpc.wallet.exchange`
+- [ ] **Frontend**: Integrate into `WalletPage`
+  - [ ] Add `TransactionModalComponent` to template
+  - [ ] Add `ExchangeModalComponent` to template
+  - [ ] Wire up "Deposit", "Withdraw", and "Exchange" buttons to open respective modals
+  - [ ] Wire up "Update" (pencil icon) buttons on balance cards to open Transaction Modal in 'update' mode
+- [ ] **Cleanup**: Remove `openUpdateModal` method and native `prompt` calls
+- [ ] **Verification**: Manual Test
+  - [ ] Verify Deposit increases balance
+  - [ ] Verify Withdraw decreases balance and blocks overdraft
+  - [ ] Verify Exchange updates both currencies correctly using custom rate
