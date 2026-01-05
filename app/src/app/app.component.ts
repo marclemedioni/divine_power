@@ -71,7 +71,7 @@ import { NotificationService } from './services/notification.service';
           <a routerLink="/vault" routerLinkActive="bg-white/5 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] border-white/10"
              class="group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-all border border-transparent">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-zinc-500 group-hover:text-orange-400 transition-colors group-[.router-link-active]:text-orange-400">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3.75h3.75M3.75 7.5h16.5V4.5m0 0A2.25 2.25 0 0 0 18 4.5H6a2.25 2.25 0 0 0-2.25 2.25V7.5m16.5 0W12 11.25 3.75 7.5" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3.75h3.75M3.75 7.5h16.5V4.5m0 0A2.25 2.25 0 0 0 18 4.5H6a2.25 2.25 0 0 0-2.25 2.25V7.5" />
             </svg>
             Vault
           </a>

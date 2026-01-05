@@ -10,37 +10,42 @@ import { DialogComponent } from '../components/ui/dialog.component';
   standalone: true,
   imports: [FormsModule, DialogComponent, CommonModule],
   template: `
-    <div class="h-full p-8">
+    <div class="h-full p-8 animate-in fade-in duration-700">
       <div class="max-w-6xl mx-auto">
         <!-- Header -->
-        <header class="mb-12 flex items-end justify-between">
+        <header class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 class="text-3xl font-bold text-white tracking-tight mb-2">Portfolio Overview</h1>
+            <h1 class="text-3xl font-bold text-white tracking-tight mb-2">Wallet</h1>
             <p class="text-zinc-500 text-sm">Track your wealth distribution across major currencies.</p>
-          </div>
-          <div class="flex items-center gap-2">
-             <div class="px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-bold flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                Live Sync
-             </div>
           </div>
         </header>
         
         <!-- Main Content -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           
-          <!-- Summary Card (placeholder for future total value) -->
-          <div class="rich-panel md:col-span-3 p-8 rounded-2xl flex items-center justify-between mb-2">
+          <!-- Summary Card -->
+          <div class="rich-panel md:col-span-3 p-8 rounded-2xl flex items-center justify-between mb-2 relative overflow-hidden">
+             <!-- Background Glow -->
+             <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-amber-500/5"></div>
+
              <div class="relative z-10">
-                <div class="text-zinc-400 text-sm font-medium mb-1 uppercase tracking-wider">Total Network Wealth</div>
-                <div class="text-5xl font-mono font-medium text-white tracking-tighter">
-                   <span class="text-zinc-600">$</span>{{ divineAmount() + (chaosAmount() / 150) | number:'1.0-2' }} <span class="text-lg text-zinc-500 font-sans font-normal ml-2">est. Divines</span>
+                <div class="text-zinc-400 text-xs font-bold uppercase tracking-widest mb-2">Total Network Wealth</div>
+                <div class="flex items-center gap-4">
+                    <div class="text-5xl font-mono font-medium text-white tracking-tighter flex items-baseline gap-2">
+                       {{ totalWealthInDivines() | number:'1.0-2' }} 
+                       <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-8 h-8 object-contain">
+                    </div>
+                </div>
+                <div class="text-zinc-500 text-xs mt-2 font-mono flex items-center gap-1.5">
+                    ≈ {{ totalWealthInChaos() | number:'1.0-0' }} 
+                    <img src="/assets/poe-ninja/chaos-orb.png" alt="Chaos Orb" class="w-4 h-4 object-contain grayscale opacity-70">
                 </div>
              </div>
+             
              <!-- Decorative Chart Line -->
-             <div class="h-16 w-48 opacity-20 relative z-10">
-                <svg viewBox="0 0 100 20" class="w-full h-full stroke-blue-500 fill-none stroke-2">
-                   <path d="M0 10 Q 10 15, 20 10 T 40 10 T 60 5 T 80 12 T 100 8" />
+             <div class="h-24 w-64 opacity-20 relative z-10 hidden md:block">
+                <svg viewBox="0 0 100 25" class="w-full h-full stroke-blue-500 fill-none stroke-2">
+                   <path d="M0 20 Q 20 25, 40 15 T 70 10 T 100 5" />
                 </svg>
              </div>
           </div>
@@ -49,25 +54,23 @@ import { DialogComponent } from '../components/ui/dialog.component';
           <div class="rich-panel p-6 rounded-2xl group transition-all hover:border-amber-500/30">
              <div class="relative z-10 flex flex-col h-full justify-between">
                <div class="flex justify-between items-start mb-6">
-                  <div class="flex items-center gap-3">
-                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-600/5 flex items-center justify-center border border-amber-500/20">
-                        <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-amber-500">
-                           <path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"/>
-                        </svg>
+                  <div class="flex items-center gap-4">
+                     <div class="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 p-2 flex items-center justify-center shadow-inner">
+                        <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-full h-full object-contain">
                      </div>
                      <div>
-                        <div class="text-white font-bold">Divine Orb</div>
-                        <div class="text-xs text-zinc-500">Tier 1 Currency</div>
+                        <div class="text-white font-bold text-lg">Divine Orb</div>
+                        <div class="text-xs text-zinc-500 font-mono">1.00 div</div>
                      </div>
                   </div>
                   <button (click)="openEditModal('DIVINE', divineAmount())" class="btn-ghost text-xs">Edit</button>
                </div>
                
                <div>
-                  <div class="text-4xl font-mono font-medium text-white tracking-tight">{{ divineAmount() }}</div>
-                  <div class="text-xs text-green-400 mt-2 flex items-center gap-1">
-                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3"><path fill-rule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z" clip-rule="evenodd" /></svg>
-                     High Value
+                  <div class="text-4xl font-mono font-medium text-white tracking-tight">{{ divineAmount() | number:'1.0-0' }}</div>
+                  <div class="text-xs text-amber-500/80 mt-2 flex items-center gap-1 font-medium">
+                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                     Primary Currency
                   </div>
                </div>
              </div>
@@ -77,23 +80,28 @@ import { DialogComponent } from '../components/ui/dialog.component';
           <div class="rich-panel p-6 rounded-2xl group transition-all hover:border-blue-500/30">
              <div class="relative z-10 flex flex-col h-full justify-between">
                <div class="flex justify-between items-start mb-6">
-                  <div class="flex items-center gap-3">
-                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/5 flex items-center justify-center border border-blue-500/20">
-                        <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-500">
-                           <circle cx="12" cy="12" r="10" />
-                        </svg>
+                  <div class="flex items-center gap-4">
+                     <div class="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 p-2 flex items-center justify-center shadow-inner">
+                        <img src="/assets/poe-ninja/chaos-orb.png" alt="Chaos Orb" class="w-full h-full object-contain">
                      </div>
                      <div>
-                        <div class="text-white font-bold">Chaos Orb</div>
-                        <div class="text-xs text-zinc-500">Standard Trading</div>
+                        <div class="text-white font-bold text-lg">Chaos Orb</div>
+                         @if (chaosPrice(); as price) {
+                             <div class="text-xs text-zinc-500 font-mono">1 div = {{ (1 / price) | number:'1.0-0' }}c</div>
+                         } @else {
+                             <div class="text-xs text-zinc-500 font-mono">Loading price...</div>
+                         }
                      </div>
                   </div>
                   <button (click)="openEditModal('CHAOS', chaosAmount())" class="btn-ghost text-xs">Edit</button>
                </div>
                
                <div>
-                  <div class="text-4xl font-mono font-medium text-white tracking-tight">{{ chaosAmount() }}</div>
-                  <div class="text-xs text-zinc-500 mt-2">Core reserve</div>
+                  <div class="text-4xl font-mono font-medium text-white tracking-tight">{{ chaosAmount() | number:'1.0-0' }}</div>
+                  <div class="text-xs text-blue-400 mt-2 flex items-center gap-1">
+                      <span class="text-zinc-500">Value:</span>
+                      {{ (chaosAmount() * (chaosPrice() || 0)) | number:'1.1-2' }} div
+                  </div>
                </div>
              </div>
           </div>
@@ -102,23 +110,32 @@ import { DialogComponent } from '../components/ui/dialog.component';
           <div class="rich-panel p-6 rounded-2xl group transition-all hover:border-zinc-500/30">
              <div class="relative z-10 flex flex-col h-full justify-between">
                <div class="flex justify-between items-start mb-6">
-                  <div class="flex items-center gap-3">
-                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-500/20 to-zinc-600/5 flex items-center justify-center border border-zinc-500/20">
-                        <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-zinc-400">
-                           <rect x="4" y="4" width="16" height="16" rx="2" />
-                        </svg>
+                  <div class="flex items-center gap-4">
+                     <div class="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 p-2 flex items-center justify-center shadow-inner">
+                        <img src="/assets/poe-ninja/exalted-orb.png" alt="Exalted Orb" class="w-full h-full object-contain">
                      </div>
                      <div>
-                        <div class="text-white font-bold">Exalted Orb</div>
-                        <div class="text-xs text-zinc-500">Legacy High-Tier</div>
+                        <div class="text-white font-bold text-lg">Exalted Orb</div>
+                        @if (exaltedPrice(); as price) {
+                           @if (price < 1) {
+                              <div class="text-xs text-zinc-500 font-mono">1 div = {{ (1 / price) | number:'1.0-0' }} ex</div>
+                           } @else {
+                              <div class="text-xs text-zinc-500 font-mono">{{ price | number:'1.0-2' }} div</div>
+                           }
+                        } @else {
+                           <div class="text-xs text-zinc-500 font-mono">Loading price...</div>
+                        }
                      </div>
                   </div>
                   <button (click)="openEditModal('EXALTED', exaltedAmount())" class="btn-ghost text-xs">Edit</button>
                </div>
                
                <div>
-                  <div class="text-4xl font-mono font-medium text-white tracking-tight">{{ exaltedAmount() }}</div>
-                  <div class="text-xs text-zinc-500 mt-2">Stable asset</div>
+                  <div class="text-4xl font-mono font-medium text-white tracking-tight">{{ exaltedAmount() | number:'1.0-0' }}</div>
+                  <div class="text-xs text-zinc-400 mt-2 flex items-center gap-1">
+                      <span class="text-zinc-500">Value:</span>
+                      {{ (exaltedAmount() * (exaltedPrice() || 0)) | number:'1.1-2' }} div
+                  </div>
                </div>
              </div>
           </div>
@@ -158,9 +175,13 @@ export default class WalletPage {
     loader: () => this.trpc.wallet.getWallet.query()
   });
 
+  marketResource = resource({
+      loader: () => this.trpc.market.getOverview.query()
+  });
+
   @ViewChild('editDialog') editDialog!: DialogComponent;
 
-  // Computed signals
+  // Wallet Signals
   divineAmount = computed(() => this.getBalance(Currency.DIVINE));
   chaosAmount = computed(() => this.getBalance(Currency.CHAOS));
   exaltedAmount = computed(() => this.getBalance(Currency.EXALTED));
@@ -168,10 +189,37 @@ export default class WalletPage {
   // Edit State
   editingCurrency = signal<string>('');
   editAmount = signal<number>(0);
+  isUpdating = signal(false);
+
+  // Market Prices (in Divine)
+  chaosPrice = computed(() => this.getPriceInRange('chaos-orb'));
+  exaltedPrice = computed(() => this.getPriceInRange('exalted-orb'));
+
+  // Total Wealth
+  totalWealthInDivines = computed(() => {
+      const div = this.divineAmount();
+      const chaos = this.chaosAmount() * (this.chaosPrice() || 0);
+      const exalt = this.exaltedAmount() * (this.exaltedPrice() || 0);
+      return div + chaos + exalt;
+  });
+
+  totalWealthInChaos = computed(() => {
+     const price = this.chaosPrice();
+     if (!price) return 0;
+     return this.totalWealthInDivines() / price;
+  });
 
   private getBalance(currency: Currency): number {
     const wallet = this.walletResource.value();
     return wallet?.balances.find(b => b.currency === currency)?.amount ?? 0;
+  }
+
+  private getPriceInRange(detailsId: string): number | null {
+      const market = this.marketResource.value();
+      if (!market) return null;
+      const item = market.find(i => i.detailsId === detailsId);
+      // Ensure we have a valid primary value (Value in Divine)
+      return item?.primaryValue ?? null;
   }
 
   openEditModal(currency: string, currentAmount: number) {
@@ -196,5 +244,19 @@ export default class WalletPage {
     } catch (err) {
       console.error('Failed to update balance', err);
     }
+  }
+
+  async refresh() {
+      if (this.isUpdating()) return;
+      this.isUpdating.set(true);
+      try {
+          // Update both wallet and market data
+          await Promise.all([
+              this.walletResource.reload(),
+              this.marketResource.reload()
+          ]);
+      } finally {
+          this.isUpdating.set(false);
+      }
   }
 }
