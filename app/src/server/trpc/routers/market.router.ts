@@ -1,6 +1,8 @@
+
 import { z } from 'zod';
 import { publicProcedure, router } from '../trpc';
 import { poeNinjaService } from '../../services/poe-ninja.service';
+import { TRPCError } from '@trpc/server';
 
 export const marketRouter = router({
   getOverview: publicProcedure
@@ -11,6 +13,19 @@ export const marketRouter = router({
   getItemDetails: publicProcedure
     .input(z.object({ detailsId: z.string() }))
     .query(async ({ input }) => {
-      return await poeNinjaService.getItemDetails(input.detailsId);
+      const details = await poeNinjaService.getItemDetails(input.detailsId);
+      if (!details) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: `Item not found: ${input.detailsId}`
+        });
+      }
+      return details;
+    }),
+
+  updateAll: publicProcedure
+    .mutation(async () => {
+      await poeNinjaService.updateAll();
+      return { success: true };
     }),
 });

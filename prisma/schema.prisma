@@ -59,5 +59,40 @@ model Balance {
   currency Currency
   amount   Int      @default(0)
 
+
   @@unique([walletId, currency])
+}
+
+model MarketItem {
+  id                 String       @id // e.g. "alch"
+  name               String
+  detailsId          String       @unique // e.g. "orb-of-alchemy"
+  image              String?
+  primaryValue       Float
+  volumePrimaryValue Float
+  updatedAt          DateTime     @updatedAt
+  pairs              MarketPair[]
+}
+
+model MarketPair {
+  id           String          @id @default(uuid())
+  marketItemId String
+  marketItem   MarketItem      @relation(fields: [marketItemId], references: [id], onDelete: Cascade)
+  currencyId   String // "divine", "exalted"
+  rate         Float
+  volume       Float
+  history      MarketHistory[]
+
+  @@unique([marketItemId, currencyId])
+}
+
+model MarketHistory {
+  id           String     @id @default(uuid())
+  marketPairId String
+  marketPair   MarketPair @relation(fields: [marketPairId], references: [id], onDelete: Cascade)
+  timestamp    DateTime
+  rate         Float
+  volume       Float
+
+  @@index([marketPairId, timestamp])
 }
