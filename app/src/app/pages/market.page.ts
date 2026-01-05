@@ -2,11 +2,12 @@ import { Component, signal, resource, computed } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trpc } from '../trpc-client';
+import { OrderModalComponent } from '../components/order-modal.component';
 
 @Component({
   selector: 'app-market',
   standalone: true,
-  imports: [CommonModule, FormsModule, DecimalPipe],
+  imports: [CommonModule, FormsModule, DecimalPipe, OrderModalComponent],
   template: `
     <div class="space-y-6">
       <!-- Header -->
@@ -58,7 +59,7 @@ import { trpc } from '../trpc-client';
                 <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Category</th>
                 <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400 text-right">Divine</th>
                 <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400 text-right">Volume</th>
-                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400 text-center">Trend</th>
+                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400 text-center">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-zinc-800">
@@ -82,11 +83,17 @@ import { trpc } from '../trpc-client';
                   <div class="text-sm font-mono text-zinc-400">{{ item.volume24h | number }}</div>
                 </td>
                 <td class="px-6 py-4">
-                  <div class="flex justify-center flex-col items-center gap-1">
-                    <div class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Stable</div>
-                    <div class="w-16 h-1 bg-zinc-800 rounded-full overflow-hidden">
-                      <div class="h-full bg-blue-500 opacity-30" style="width: 100%"></div>
-                    </div>
+                  <div class="flex justify-center gap-2">
+                    <button 
+                      (click)="openTrade(item, 'BUY')"
+                      class="px-3 py-1.5 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 text-xs font-bold border border-green-500/20 transition-all hover:scale-105 active:scale-95">
+                      Buy
+                    </button>
+                    <button 
+                      (click)="openTrade(item, 'SELL')"
+                      class="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/20 transition-all hover:scale-105 active:scale-95">
+                      Sell
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -107,6 +114,18 @@ import { trpc } from '../trpc-client';
           </div>
         </div>
       </div>
+
+      <!-- Trade Modal -->
+       <app-order-modal 
+        *ngIf="tradeState()" 
+        [itemId]="tradeState()!.item.id"
+        [itemName]="tradeState()!.item.name"
+        [type]="tradeState()!.type"
+        [defaultPrice]="getDefaultPrice(tradeState()!.item)"
+        (close)="tradeState.set(null)"
+        (orderPlaced)="onOrderPlaced()"
+      ></app-order-modal>
+
     </div>
   `,
 })
@@ -131,6 +150,24 @@ export default class MarketPage {
     }),
   });
 
+  // Trade Modal State
+  tradeState = signal<{ item: any, type: 'BUY' | 'SELL' } | null>(null);
+
+  openTrade(item: any, type: 'BUY' | 'SELL') {
+    this.tradeState.set({ item, type });
+  }
+
+  getDefaultPrice(item: any): number {
+    // Default to Divine price, otherwise Chaos? 
+    // The OrderModal defaults currency to DIVINE.
+    return Number(item.divineRate || 0);
+  }
+
+  onOrderPlaced() {
+    // Maybe show a toast?
+    // Refreshing items isn't necessary for orders, but good practice if inventory changed (not yet).
+  }
+
   nextPage() {
     if (this.itemsResource.value()?.hasMore) {
       this.offset.update(o => o + this.limit);
@@ -143,3 +180,4 @@ export default class MarketPage {
     }
   }
 }
+
