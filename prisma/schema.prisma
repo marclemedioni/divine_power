@@ -31,3 +31,33 @@ enum OrderStatus {
   CANCELLED
 }
 
+
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  wallet    Wallet?
+}
+
+model Wallet {
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  balances  Balance[]
+}
+
+
+model Balance {
+  id       String   @id @default(uuid())
+  walletId String
+  wallet   Wallet   @relation(fields: [walletId], references: [id])
+  currency Currency
+  amount   Int      @default(0)
+
+  @@unique([walletId, currency])
+}

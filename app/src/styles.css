@@ -1,16 +1,18 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   --color-primary: #d4af37; /* POE Gold */
-  --color-accent: #3b82f6;  /* Divine Blue */
+  --color-accent: #3b82f6; /* Divine Blue */
 }
 
 :root {
   color-scheme: dark;
 }
 
-html, body {
-  @apply bg-[#020203] text-zinc-100 font-sans h-full overflow-hidden antialiased;
+html,
+body {
+  @apply bg-[#020203] text-zinc-100 h-full overflow-hidden antialiased;
+  font-family: 'Inter', sans-serif;
 }
 
 /* Custom Scrollbar */
@@ -35,9 +37,17 @@ html, body {
   right: 0;
   bottom: 0;
   z-index: -1;
-  background: 
-    radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, rgba(212, 175, 55, 0.05) 0%, transparent 50%);
+  background:
+    radial-gradient(
+      circle at 0% 0%,
+      rgba(59, 130, 246, 0.05) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 100% 100%,
+      rgba(212, 175, 55, 0.05) 0%,
+      transparent 50%
+    );
   pointer-events: none;
 }
 
@@ -50,15 +60,46 @@ html, body {
 }
 
 .premium-border::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: -1px;
-  background: linear-gradient(to bottom right, rgba(59, 130, 246, 0.2), transparent, rgba(212, 175, 55, 0.2));
+  background: linear-gradient(
+    to bottom right,
+    rgba(59, 130, 246, 0.2),
+    transparent,
+    rgba(212, 175, 55, 0.2)
+  );
   z-index: -1;
   border-radius: inherit;
   opacity: 0.5;
 }
 
-.text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-primary;
+
+/* Noise Texture */
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  pointer-events: none;
 }
+
+.rich-panel {
+  @apply bg-zinc-900/40 backdrop-blur-2xl border border-white/5 shadow-2xl relative overflow-hidden;
+}
+
+.rich-panel::after {
+  content: "";
+  @apply absolute inset-0 pointer-events-none;
+  background: radial-gradient(circle at top left, rgba(255,255,255,0.03), transparent 40%);
+}
+
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-white via-zinc-200 to-zinc-500;
+}
+
+.btn-primary {
+  @apply bg-zinc-100 text-black hover:bg-white font-medium px-4 py-2 rounded-lg transition-all active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.1)];
+}
+
+.btn-ghost {
+  @apply text-zinc-400 hover:text-white hover:bg-white/5 px-3 py-1.5 rounded-lg transition-all border border-transparent hover:border-white/5;
+}
+
