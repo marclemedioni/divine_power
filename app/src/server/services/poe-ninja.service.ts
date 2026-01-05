@@ -189,11 +189,54 @@ export async function syncMarketData(): Promise<{
 
     let totalItems = 0;
 
+    // Concurrency limit for detail fetching
+    const CONCURRENCY_LIMIT = 10;
+    
+    // Simple p-limit implementation
+    const limit = <T>(concurrency: number) => {
+      const queue: (() => Promise<void>)[] = [];
+      let active = 0;
+      
+      const next = () => {
+        active--;
+        if (queue.length > 0) {
+          queue.shift()!();
+        }
+      };
+      
+      const run = (fn: () => Promise<T>): Promise<T> => {
+        const promise = new Promise<T>((resolve, reject) => {
+          const execute = async () => {
+            active++;
+            try {
+              const result = await fn();
+              resolve(result);
+            } catch (err) {
+              reject(err);
+            } finally {
+              next();
+            }
+          };
+          
+          if (active < concurrency) {
+            execute();
+          } else {
+            queue.push(execute);
+          }
+        });
+        return promise;
+      };
+      
+      return run;
+    };
+
+    const runConcurrent = limit(CONCURRENCY_LIMIT);
+
     for (const category of CATEGORIES) {
       // Fetch all items in the category
       const items = await fetchCategoryOverview(category);
 
-      for (const item of items) {
+      const promises = items.map(item => runConcurrent(async () => {
         // Upsert the market item with basic info
         const marketItem = await prisma.marketItem.upsert({
           where: { externalId: item.id },
@@ -231,8 +274,8 @@ export async function syncMarketData(): Promise<{
             const currency = mapCurrency(pair.id);
             if (!currency || !pair.history) continue;
 
-            for (const historyEntry of pair.history) {
-              await prisma.priceHistory.upsert({
+            const historyOps = pair.history.map(historyEntry => 
+              prisma.priceHistory.upsert({
                 where: {
                   itemId_timestamp_currency: {
                     itemId: marketItem.id,
@@ -251,13 +294,16 @@ export async function syncMarketData(): Promise<{
                   rate: historyEntry.rate,
                   volume: historyEntry.volumePrimaryValue ?? null,
                 },
-              });
-            }
+              })
+            );
+            await prisma.$transaction(historyOps);
           }
         }
 
         totalItems++;
-      }
+      }));
+
+      await Promise.all(promises);
 
       // Small delay between categories to avoid rate limiting
       await new Promise((resolve) => setTimeout(resolve, 200));
