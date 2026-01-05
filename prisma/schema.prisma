@@ -52,6 +52,17 @@ model Wallet {
   balances  Balance[]
   inventory Inventory[]
   lots      InventoryLot[]
+  snapshots WalletSnapshot[]
+}
+
+model WalletSnapshot {
+  id          String   @id @default(uuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id])
+  totalWealth Float    // Total value in Divines
+  timestamp   DateTime @default(now())
+  
+  @@index([walletId, timestamp])
 }
 
 

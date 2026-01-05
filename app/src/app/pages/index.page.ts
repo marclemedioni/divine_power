@@ -1,6 +1,7 @@
-import { Component, inject, resource, computed, signal } from '@angular/core';
-import { CommonModule, CurrencyPipe, DecimalPipe } from '@angular/common'; // Import CommonModule for pipes
+import { Component, inject, resource, computed, signal, PLATFORM_ID, effect } from '@angular/core';
+import { CommonModule, CurrencyPipe, DecimalPipe, isPlatformBrowser } from '@angular/common'; // Import CommonModule for pipes
 import { RouterLink } from '@angular/router';
+import { NgxEchartsDirective } from 'ngx-echarts';
 import { TRPC_CLIENT } from '../trpc.token';
 import { CreateOrderComponent } from '../components/create-order.component';
 import { ResolveOrderComponent } from '../components/resolve-order.component';
@@ -8,7 +9,7 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
 @Component({
   selector: 'app-index',
   standalone: true,
-  imports: [CommonModule, RouterLink, CreateOrderComponent, ResolveOrderComponent],
+  imports: [CommonModule, RouterLink, CreateOrderComponent, ResolveOrderComponent, NgxEchartsDirective],
   template: `
     <div class="h-full p-8 animate-in fade-in duration-700 pb-20">
         <div class="max-w-7xl mx-auto">
@@ -156,6 +157,29 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
 
             </div>
 
+            <!-- Wealth History Chart -->
+            <div class="mt-8">
+                <div class="rich-panel p-6 rounded-2xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="text-zinc-400 text-xs font-bold uppercase tracking-widest">Wealth Progression</div>
+                        <button (click)="recordCurrentSnapshot()" class="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                            + Record Snapshot
+                        </button>
+                    </div>
+                    @if (isBrowser && wealthHistoryResource.value()?.length) {
+                        <div echarts [options]="wealthChartOptions()" [theme]="'dark'" class="w-full h-64"></div>
+                    } @else if (wealthHistoryResource.value()?.length === 0) {
+                        <div class="flex items-center justify-center h-64 text-zinc-500 text-sm italic">
+                            No wealth history yet. Click "Record Snapshot" to start tracking.
+                        </div>
+                    } @else {
+                        <div class="flex items-center justify-center h-64">
+                            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                        </div>
+                    }
+                </div>
+            </div>
+
             <!-- Market Ticker / Highlights -->
             <div class="mt-8">
                  <div class="text-zinc-500 text-sm font-bold mb-4 flex items-center justify-between">
@@ -228,6 +252,8 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
 })
 export default class CockpitPage {
   private trpc = inject(TRPC_CLIENT);
+  private platformId = inject(PLATFORM_ID);
+  public isBrowser = isPlatformBrowser(this.platformId);
 
   public loading = signal(false);
 
@@ -243,6 +269,89 @@ export default class CockpitPage {
   marketResource = resource({
       loader: () => this.trpc.market.getOverview.query()
   });
+
+  wealthHistoryResource = resource({
+    loader: () => this.trpc.wallet.getWealthHistory.query({ days: 30 })
+  });
+
+  // Wealth Chart Options
+  wealthChartOptions = computed(() => {
+    const history = this.wealthHistoryResource.value() ?? [];
+    if (history.length === 0) return {};
+
+    const dates = history.map((h: any) => {
+      const d = new Date(h.timestamp);
+      return `${d.getMonth() + 1}/${d.getDate()}`;
+    });
+    const values = history.map((h: any) => h.totalWealth);
+
+    return {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: 'rgba(24, 24, 27, 0.9)',
+        borderColor: '#3f3f46',
+        textStyle: { color: '#fff' },
+        formatter: (params: any) => {
+          const p = params[0];
+          return `<strong>${p.name}</strong><br/>Wealth: ${p.value.toFixed(2)} div`;
+        }
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '5%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: dates,
+        axisLine: { lineStyle: { color: '#52525b' } },
+        axisLabel: { color: '#a1a1aa', fontSize: 10 }
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: '#27272a' } },
+        axisLabel: { color: '#a1a1aa', fontSize: 10 }
+      },
+      series: [{
+        name: 'Wealth',
+        type: 'line',
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { width: 3, color: '#3b82f6' },
+        itemStyle: { color: '#3b82f6' },
+        areaStyle: {
+          opacity: 0.3,
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(59, 130, 246, 0.5)' },
+              { offset: 1, color: 'transparent' }
+            ]
+          }
+        },
+        data: values
+      }]
+    };
+  });
+
+  // Record current wealth as snapshot
+  async recordCurrentSnapshot() {
+    const wealth = this.totalWealth();
+    if (wealth <= 0) return;
+    
+    try {
+      await this.trpc.wallet.recordSnapshot.mutate({ totalWealth: wealth });
+      this.wealthHistoryResource.reload();
+    } catch (e) {
+      console.error('Failed to record snapshot', e);
+    }
+  }
 
   // Computations
   

@@ -4,6 +4,64 @@ import { publicProcedure, router } from '../trpc';
 import { prisma, Currency, OrderType, OrderStatus } from '../../db';
 import { TRPCError } from '@trpc/server';
 
+// Helper to calculate and record wallet snapshot after changes
+async function recordWalletSnapshot() {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: 'default@user.com' },
+      include: { 
+        wallet: { 
+          include: { 
+            balances: true,
+            inventory: { include: { marketItem: true } }
+          } 
+        } 
+      }
+    });
+    
+    if (!user?.wallet) return;
+    
+    // Calculate total wealth in Divines
+    const divBalance = user.wallet.balances.find(b => b.currency === 'DIVINE')?.amount ?? 0;
+    const chaosBalance = user.wallet.balances.find(b => b.currency === 'CHAOS')?.amount ?? 0;
+    const exBalance = user.wallet.balances.find(b => b.currency === 'EXALTED')?.amount ?? 0;
+    
+    // Get market prices for conversion
+    const chaosItem = await prisma.marketItem.findUnique({ where: { detailsId: 'chaos-orb' } });
+    const exItem = await prisma.marketItem.findUnique({ where: { detailsId: 'exalted-orb' } });
+    
+    const chaosPrice = chaosItem?.primaryValue ?? 0;
+    const exPrice = exItem?.primaryValue ?? 0;
+    
+    // Calculate inventory value
+    let inventoryValue = 0;
+    for (const inv of user.wallet.inventory) {
+      if (inv.quantity > 0 && inv.marketItem.primaryValue) {
+        inventoryValue += inv.quantity * inv.marketItem.primaryValue;
+      }
+    }
+    
+    const totalWealth = divBalance + (chaosBalance * chaosPrice) + (exBalance * exPrice) + inventoryValue;
+    
+    // Record snapshot (avoid duplicates within 1 minute)
+    const oneMinuteAgo = new Date();
+    oneMinuteAgo.setMinutes(oneMinuteAgo.getMinutes() - 1);
+    
+    const recentSnapshot = await prisma.walletSnapshot.findFirst({
+      where: { walletId: user.wallet.id, timestamp: { gte: oneMinuteAgo } },
+      orderBy: { timestamp: 'desc' }
+    });
+    
+    if (!recentSnapshot || Math.abs(recentSnapshot.totalWealth - totalWealth) > 0.01) {
+      await prisma.walletSnapshot.create({
+        data: { walletId: user.wallet.id, totalWealth }
+      });
+    }
+  } catch (e) {
+    console.error('Failed to record wallet snapshot:', e);
+  }
+}
+
 export const ordersRouter = router({
   createOrder: publicProcedure
     .input(z.object({
@@ -226,6 +284,9 @@ export const ordersRouter = router({
               }
           });
       });
+
+      // Record wallet snapshot after order resolution
+      await recordWalletSnapshot();
 
       return { success: true };
     }),
