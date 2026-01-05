@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { publicProcedure, router } from '../trpc';
 import { walletRouter } from './wallet.router';
+import { marketRouter } from './market.router';
 
 export const appRouter = router({
   // Health check / hello world
@@ -12,6 +13,7 @@ export const appRouter = router({
       };
     }),
   wallet: walletRouter,
+  market: marketRouter,
 });
 
 // export type definition of API
