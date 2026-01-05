@@ -3,7 +3,7 @@
  * Fetches market data for Path of Exile 2 items
  */
 
-import { prisma, type Currency } from '../db';
+import { prisma, type Currency, Prisma } from '../db';
 
 // POE2 poe.ninja API endpoints
 const POE_NINJA_BASE_URL = 'https://poe.ninja/poe2/api/economy/exchange/current';
@@ -11,10 +11,16 @@ const POE_CDN_BASE_URL = 'https://web.poecdn.com';
 const POE_NINJA_LEAGUE = (typeof process !== 'undefined' ? process.env['POE_NINJA_LEAGUE'] : undefined) || 'Fate of the Vaal';
 
 // poe.ninja API response types for overview
+interface PoeNinjaSparkline {
+  data: number[];
+  totalChange: number;
+}
+
 interface PoeNinjaLine {
   id: string;
   primaryValue: number;
   volumePrimaryValue?: number;
+  sparkline?: PoeNinjaSparkline;
 }
 
 interface PoeNinjaItem {
@@ -48,6 +54,8 @@ interface PoeNinjaOverviewItem {
   chaos: number;
   exalted: number;
   listingCount?: number;
+  sparklineData?: number[];
+  change7d?: number;
 }
 
 // poe.ninja API response types for details
@@ -136,6 +144,8 @@ async function fetchCategoryOverview(
           chaos: line.primaryValue * chaosRate,
           exalted: line.primaryValue * exaltedRate,
           listingCount: line.volumePrimaryValue,
+          sparklineData: line.sparkline?.data,
+          change7d: line.sparkline?.totalChange,
         });
       }
     }
@@ -250,7 +260,9 @@ export async function syncMarketData(): Promise<{
             divineRate: item.divine ?? null,
             chaosRate: item.chaos ?? null,
             exaltedRate: item.exalted ?? null,
-            volume24h: item.listingCount ?? null,
+            divineVolume: item.listingCount ?? null,
+            sparklineData: item.sparklineData ?? Prisma.JsonNull,
+            change7d: item.change7d ?? null,
             lastSync: new Date(),
           },
           update: {
@@ -261,7 +273,9 @@ export async function syncMarketData(): Promise<{
             divineRate: item.divine ?? null,
             chaosRate: item.chaos ?? null,
             exaltedRate: item.exalted ?? null,
-            volume24h: item.listingCount ?? null,
+            divineVolume: item.listingCount ?? null,
+            sparklineData: item.sparklineData ?? Prisma.JsonNull,
+            change7d: item.change7d ?? null,
             lastSync: new Date(),
           },
         });
@@ -369,7 +383,9 @@ export async function syncOverviewOnly(): Promise<{
             divineRate: item.divine ?? null,
             chaosRate: item.chaos ?? null,
             exaltedRate: item.exalted ?? null,
-            volume24h: item.listingCount ?? null,
+            divineVolume: item.listingCount ?? null,
+            sparklineData: item.sparklineData ?? Prisma.JsonNull,
+            change7d: item.change7d ?? null,
             lastSync: new Date(),
           },
           update: {
@@ -380,7 +396,9 @@ export async function syncOverviewOnly(): Promise<{
             divineRate: item.divine ?? null,
             chaosRate: item.chaos ?? null,
             exaltedRate: item.exalted ?? null,
-            volume24h: item.listingCount ?? null,
+            divineVolume: item.listingCount ?? null,
+            sparklineData: item.sparklineData ?? Prisma.JsonNull,
+            change7d: item.change7d ?? null,
             lastSync: new Date(),
           },
         });

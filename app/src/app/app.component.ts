@@ -2,7 +2,7 @@ import { Component, Inject, PLATFORM_ID } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { NotificationService } from './services/notification.service';
-import { trpc } from './trpc-client';
+
 
 @Component({
   selector: 'app-root',
@@ -63,13 +63,6 @@ import { trpc } from './trpc-client';
             <span class="text-sm font-semibold uppercase tracking-wider">Orders</span>
           </a>
         </nav>
-
-        <div class="p-6 border-t border-zinc-800/50 bg-zinc-950/20">
-          <div class="flex items-center gap-3 text-zinc-500">
-            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-            <span class="text-[10px] font-black uppercase tracking-widest">Network Live</span>
-          </div>
-        </div>
       </aside>
 
       <!-- Main Content -->
@@ -109,37 +102,6 @@ export class AppComponent {
   }
 
   startPolling() {
-    setInterval(async () => {
-      try {
-        // Check for actionable orders
-        const actionable = await trpc.orders.getActionableOrders.query();
-        let newActionableCount = 0;
-
-        for (const order of actionable) {
-          if (!this.notifiedOrders.has(order.id)) {
-            this.notifiedOrders.add(order.id);
-            newActionableCount++;
-          }
-        }
-
-        if (newActionableCount > 0) {
-          this.notify.show(
-            'Trade Opportunity!', 
-            `${newActionableCount} orders have reached their target price.`, 
-            'success'
-          );
-        }
-
-        // Check for top Oracle suggestions (simplified: check top 1 score)
-        const suggestions = await trpc.oracle.getSuggestions.query({ limit: 1, strategy: 'ALL' });
-        if (suggestions.length > 0 && suggestions[0].score >= 90) {
-           // We might want to throttle this to avoid spamming same suggestion
-           // For now, let's just log or ignore to prevent spam unless we track it
-        }
-
-      } catch (err) {
-        console.error('Polling error', err);
-      }
-    }, 60000); // Check every minute
+    
   }
 }
