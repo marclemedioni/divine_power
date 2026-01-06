@@ -69,12 +69,11 @@ function runTests() {
         { market: 1, input: 1.5, expected: 50 },
     ];
     
-    let failedDev = 0;
+
     devTests.forEach(t => {
         const res = calculateDeviation(t.input, t.market);
         if (Math.abs(res - t.expected) > 0.01) {
             console.error(`FAILED: Market ${t.market}, Input ${t.input}. Expected ${t.expected}, Got ${res}`);
-            failedDev++;
         } else {
              console.log(`PASS: Market ${t.market}, Input ${t.input} => ${res}%`);
         }

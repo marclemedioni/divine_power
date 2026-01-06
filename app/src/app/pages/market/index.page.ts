@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TRPC_CLIENT } from '../../trpc.token';
 import { withTransferCache } from '../../trpc.utils';
+import { MarketItem } from '../../interfaces';
 
 @Component({
   selector: 'app-market',
@@ -155,8 +156,8 @@ export default class MarketPage {
   });
 
   // Calculate volume in ITEMS (Volume / Rate)
-  getPairVolume(item: any, currencyId: string): number | null {
-      const pair = item.pairs?.find((p: any) => p.currencyId === currencyId);
+  getPairVolume(item: MarketItem, currencyId: string): number | null {
+      const pair = item.pairs?.find((p) => p.currencyId === currencyId);
       // Volume is always in Primary Currency (Divine).
       // So to get items: Volume(Div) / Rate(Div/Item) = Items
       if (!pair || !item.primaryValue || item.primaryValue === 0) return null;

@@ -12,9 +12,9 @@ const serverLink: TRPCLink<AppRouter> = () => {
       const caller = appRouter.createCaller({});
       
       const pathParts = op.path.split('.');
-      let fn: any = caller;
+      let fn: unknown = caller;
       for (const part of pathParts) {
-        if (fn) fn = fn[part];
+        if (fn && typeof fn === 'object') fn = (fn as Record<string, unknown>)[part];
       }
 
       if (typeof fn !== 'function') {
@@ -22,7 +22,7 @@ const serverLink: TRPCLink<AppRouter> = () => {
         return;
       }
 
-      Promise.resolve(fn(op.input))
+      Promise.resolve((fn as (input: unknown) => Promise<unknown>)(op.input))
         .then((data) => {
           observer.next({ result: { data } });
           observer.complete();

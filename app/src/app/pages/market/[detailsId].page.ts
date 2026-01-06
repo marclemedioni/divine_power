@@ -1,11 +1,11 @@
 
-import { Component, inject, resource, computed, signal, effect, PLATFORM_ID } from '@angular/core';
+import { Component, inject, resource, computed, signal, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { TRPC_CLIENT } from '../../trpc.token';
 import { withTransferCache } from '../../trpc.utils';
-import { PoeNinjaItemDetails, PoeNinjaPairData } from '../../../server/services/poe-ninja.service';
+import { PoeNinjaItemDetails } from '../../../server/services/poe-ninja.service';
 import { CreateOrderComponent } from '../../components/create-order.component';
 
 @Component({
@@ -37,7 +37,6 @@ import { CreateOrderComponent } from '../../components/create-order.component';
       }
 
       @if (detailsResource.value(); as item) {
-        @let castedItem = $any(item);
         <!-- Header -->
         <div class="bg-zinc-900/50 rounded-2xl border border-zinc-800 p-8 relative overflow-hidden">
           <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-transparent to-transparent"></div>
@@ -45,17 +44,17 @@ import { CreateOrderComponent } from '../../components/create-order.component';
           <div class="relative z-10 flex items-center justify-between">
             <div class="flex items-center gap-6">
                <div class="w-24 h-24 bg-zinc-950 rounded-xl border border-zinc-800 p-1 flex items-center justify-center shrink-0">
-                  @if (castedItem.id) {
-                    <img [src]="'/assets/poe-ninja/' + castedItem.detailsId + '.png'" [alt]="castedItem.name" class="w-full h-full object-contain"
+                  @if (item.id) {
+                    <img [src]="'/assets/poe-ninja/' + item.detailsId + '.png'" [alt]="item.name" class="w-full h-full object-contain"
                        onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                   }
                </div>
                <div>
-                 <h1 class="text-4xl font-bold text-white mb-2">{{ castedItem.name }}</h1>
+                 <h1 class="text-4xl font-bold text-white mb-2">{{ item.name }}</h1>
                  <div class="flex items-center gap-3 text-zinc-400">
-                    <span class="px-2 py-1 bg-zinc-800 rounded text-xs uppercase font-bold tracking-wider">{{ castedItem.category }}</span>
+                    <span class="px-2 py-1 bg-zinc-800 rounded text-xs uppercase font-bold tracking-wider">{{ item.category }}</span>
                     <span class="text-zinc-600">|</span>
-                    <span class="font-mono text-sm">{{ castedItem.id }}</span>
+                    <span class="font-mono text-sm">{{ item.id }}</span>
                  </div>
                </div>
             </div>
@@ -64,7 +63,7 @@ import { CreateOrderComponent } from '../../components/create-order.component';
               <div>
                 <div class="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-1">Current Price (Divine)</div>
                 <div class="text-5xl font-mono font-bold text-blue-400">
-                  {{ getRate(castedItem, 'divine') | number:'1.1-2' }}
+                  {{ getRate(item, 'divine') | number:'1.1-2' }}
                 </div>
               </div>
               
@@ -84,8 +83,8 @@ import { CreateOrderComponent } from '../../components/create-order.component';
         <!-- Order Modal -->
         @if (isTradeModalOpen()) {
             <app-create-order 
-                [marketItem]="castedItem" 
-                (close)="isTradeModalOpen.set(false)"
+                [marketItem]="item"  
+                (closed)="isTradeModalOpen.set(false)"
                 (created)="onOrderCreated()"
             />
         }
@@ -110,13 +109,17 @@ import { CreateOrderComponent } from '../../components/create-order.component';
                 @for (currency of ['divine', 'exalted', 'chaos']; track currency) {
                   <div
                        (click)="selectedCurrency.set(currency)"
+                       (keydown.enter)="selectedCurrency.set(currency)"
+                       (keydown.space)="selectedCurrency.set(currency); $event.preventDefault()"
+                       tabindex="0"
+                       role="button"
                        [class.border-blue-500]="selectedCurrency() === currency"
                        [class.bg-zinc-800]="selectedCurrency() === currency"
                        class="p-4 bg-zinc-950/50 rounded-lg border border-zinc-800 hover:border-zinc-600 transition-all cursor-pointer group">
                       
                       <div class="flex justify-between items-center mb-2">
                           <div class="flex items-center gap-2">
-                              <img [src]="'/assets/poe-ninja/' + currency + '-orb.png'" class="w-5 h-5 object-contain">
+                              <img [src]="'/assets/poe-ninja/' + currency + '-orb.png'" [alt]="currency + ' Orb'" class="w-5 h-5 object-contain">
                               <span class="text-sm font-bold text-white capitalize">{{ currency }} Orb</span>
                           </div>
                           <span class="text-xs text-zinc-500 font-mono">24h Vol</span>
@@ -161,7 +164,7 @@ import { CreateOrderComponent } from '../../components/create-order.component';
                                 [class.text-white]="selectedCurrency() === curr"
                                 [class.text-zinc-500]="selectedCurrency() !== curr"
                                 class="px-3 py-1 text-xs font-bold rounded flex items-center gap-2 transition-all">
-                            <img [src]="'/assets/poe-ninja/' + curr + '-orb.png'" class="w-4 h-4 object-contain">
+                            <img [src]="'/assets/poe-ninja/' + curr + '-orb.png'" [alt]="curr + ' Orb'" class="w-4 h-4 object-contain">
                             <span class="hidden md:inline capitalize">{{ curr }}</span>
                         </button>
                       }
@@ -218,22 +221,21 @@ export default class MarketDetailsPage {
   });
 
   // Helpers
-  getRate(item: any, currencyId: string): number {
-    const casted = item as PoeNinjaItemDetails;
-    return casted.pairs?.find(p => p.currencyId === currencyId)?.rate ?? 0;
+  getRate(item: PoeNinjaItemDetails, currencyId: string): number {
+    return item.pairs?.find(p => p.currencyId === currencyId)?.rate ?? 0;
   }
 
-  getVolume(item: any, currencyId: string): number {
-    const casted = item as PoeNinjaItemDetails;
-    const divineRate = this.getRate(casted, 'divine');
-    const pair = casted.pairs?.find(p => p.currencyId === currencyId);
+  getVolume(item: PoeNinjaItemDetails, currencyId: string): number {
+    const divineRate = this.getRate(item, 'divine');
+    const pair = item.pairs?.find(p => p.currencyId === currencyId);
     if (!pair || !divineRate || divineRate === 0) return 0;
     return pair.volume / divineRate;
   }
 
   // Chart Options Computed
   chartOptions = computed(() => {
-    const item = this.detailsResource.value() as any as PoeNinjaItemDetails;
+    const item = this.detailsResource.value();
+    if (!item) return {};
     const currency = this.selectedCurrency();
     const history = item?.pairs?.find(p => p.currencyId === currency)?.history ?? [];
     

@@ -105,7 +105,7 @@ export class PoeNinjaService {
                             const response = await fetch(item.image);
                             if (response.ok && response.body) {
                                 const fileStream = fs.createWriteStream(localFile);
-                                // @ts-ignore
+                                // @ts-expect-error - Readable.fromWeb and stream/promises types conflict in current env
                                 await finished(Readable.fromWeb(response.body).pipe(fileStream));
                             }
                         }
@@ -338,7 +338,7 @@ export class PoeNinjaService {
         currencyId: p.id,
         rate: p.rate ?? 0,
         volume: p.volumePrimaryValue ?? 0,
-        history: (p as any).history // data.pairs in api has history
+        history: p.history // data.pairs in api has history
       }))
     };
   }

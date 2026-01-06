@@ -1,7 +1,8 @@
-import { Component, Input, Output, EventEmitter, inject, signal, computed, effect } from '@angular/core';
+import { Component, Input, Output, EventEmitter, inject, signal, computed, effect, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TRPC_CLIENT } from '../trpc.token';
+import { MarketItem, Wallet, InventoryLot } from '../interfaces';
 
 const INVESTMENT_MODES = {
   PRUDENT: 0.1,
@@ -17,15 +18,20 @@ type InvestmentMode = keyof typeof INVESTMENT_MODES;
   imports: [CommonModule, FormsModule],
   template: `
     <div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" (click)="$event.stopPropagation()">
+      <div 
+        class="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" 
+        (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
+        tabindex="-1"
+        role="presentation">
         
         <!-- Header -->
         <div class="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50">
           <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" class="w-6 h-6 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+            <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" [alt]="marketItem.name" class="w-6 h-6 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
             <span class="text-blue-400">Trade</span> {{ marketItem.name }}
           </h2>
-          <button (click)="close.emit()" class="text-zinc-500 hover:text-white transition-colors">
+          <button (click)="closed.emit()" class="text-zinc-500 hover:text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
@@ -57,8 +63,8 @@ type InvestmentMode = keyof typeof INVESTMENT_MODES;
           <!-- Strategy / Investment Mode -->
           @if (orderType() === 'BUY') {
               <div class="space-y-2">
-                <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Investment Strategy (Divine Flip)</label>
-                <div class="grid grid-cols-3 gap-2">
+                <label for="investment-strategy" class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Investment Strategy (Divine Flip)</label>
+                <div id="investment-strategy" class="grid grid-cols-3 gap-2">
                     @for (mode of modeKeys; track mode) {
                         <button 
                             class="py-2 px-3 rounded-lg border text-xs font-bold transition-all flex flex-col items-center gap-1"
@@ -77,7 +83,7 @@ type InvestmentMode = keyof typeof INVESTMENT_MODES;
                 </div>
                 <div class="text-right text-xs text-zinc-500 font-mono flex items-center justify-end gap-1">
                     Available: <span class="text-blue-400 font-bold">{{ availableCurrency() | number:'1.0-0' }}</span>
-                    <img src="/assets/poe-ninja/divine-orb.png" class="w-4 h-4 object-contain">
+                    <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-4 h-4 object-contain">
                 </div>
               </div>
           } @else {
@@ -152,7 +158,7 @@ type InvestmentMode = keyof typeof INVESTMENT_MODES;
                 
                 <div class="text-right text-xs text-zinc-500 font-mono flex items-center justify-end gap-1">
                   Total Owned: <span class="text-blue-400 font-bold">{{ availableInventory() | number:'1.0-0' }}</span>
-                  <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" class="w-4 h-4 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                  <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" [alt]="marketItem.name" class="w-4 h-4 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                 </div>
               </div>
           }
@@ -161,23 +167,23 @@ type InvestmentMode = keyof typeof INVESTMENT_MODES;
           @if (orderType() === 'BUY') {
             <div class="space-y-4 bg-zinc-950 p-4 rounded-lg border border-zinc-800">
                <div class="space-y-2">
-                  <label class="text-xs font-bold text-zinc-500 uppercase">🔵 BUY Ratio (Entry)</label>
+                  <label for="buy-ratio-item" class="text-xs font-bold text-zinc-500 uppercase">🔵 BUY Ratio (Entry)</label>
                   <div class="flex items-center gap-3">
-                     <input type="number" step="1" [(ngModel)]="buyRatioItem" class="w-20 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-white font-mono text-center">
-                     <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" class="w-5 h-5" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                     <input id="buy-ratio-item" type="number" step="1" [(ngModel)]="buyRatioItem" class="w-20 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-white font-mono text-center">
+                     <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" [alt]="marketItem.name" class="w-5 h-5" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                      <span class="text-zinc-600">:</span>
                      <input type="number" step="0.01" [(ngModel)]="buyRatioDivine" class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-2 pr-10 text-white font-mono">
-                     <img src="/assets/poe-ninja/divine-orb.png" class="w-5 h-5 -ml-9">
+                     <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-5 h-5 -ml-9">
                   </div>
                </div>
                <div class="space-y-2">
-                  <label class="text-xs font-bold text-zinc-500 uppercase">🟢 SELL Ratio (Exit)</label>
+                  <label for="sell-ratio-item" class="text-xs font-bold text-zinc-500 uppercase">🟢 SELL Ratio (Exit)</label>
                   <div class="flex items-center gap-3">
-                     <input type="number" step="1" [(ngModel)]="sellRatioItem" class="w-20 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-white font-mono text-center">
-                     <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" class="w-5 h-5" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                     <input id="sell-ratio-item" type="number" step="1" [(ngModel)]="sellRatioItem" class="w-20 bg-zinc-900 border border-zinc-700 rounded-lg p-2 text-white font-mono text-center">
+                     <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" [alt]="marketItem.name" class="w-5 h-5" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                      <span class="text-zinc-600">:</span>
                      <input type="number" step="0.01" [(ngModel)]="sellRatioDivine" class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg p-2 pr-10 text-white font-mono">
-                     <img src="/assets/poe-ninja/divine-orb.png" class="w-5 h-5 -ml-9">
+                     <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-5 h-5 -ml-9">
                   </div>
                </div>
 
@@ -232,14 +238,14 @@ type InvestmentMode = keyof typeof INVESTMENT_MODES;
                      <div class="text-[10px] text-zinc-500 uppercase">I Want</div>
                      <div class="flex items-center gap-2 bg-zinc-900/50 p-3 rounded-lg">
                         <span class="text-3xl font-mono font-bold text-white">{{ optimalQuantity() }}</span>
-                        <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" class="w-7 h-7" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                        <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" [alt]="marketItem.name" class="w-7 h-7" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                      </div>
                   </div>
                   <div>
                      <div class="text-[10px] text-zinc-500 uppercase">I Have</div>
                      <div class="flex items-center gap-2 bg-zinc-900/50 p-3 rounded-lg">
                         <span class="text-3xl font-mono font-bold text-white">{{ inGameDivines() }}</span>
-                        <img src="/assets/poe-ninja/divine-orb.png" class="w-7 h-7">
+                        <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-7 h-7">
                      </div>
                   </div>
                 } @else {
@@ -248,14 +254,14 @@ type InvestmentMode = keyof typeof INVESTMENT_MODES;
                      <div class="text-[10px] text-zinc-500 uppercase">I Want</div>
                      <div class="flex items-center gap-2 bg-zinc-900/50 p-3 rounded-lg">
                         <span class="text-3xl font-mono font-bold text-white">{{ inGameDivines() }}</span>
-                        <img src="/assets/poe-ninja/divine-orb.png" class="w-7 h-7">
+                        <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-7 h-7">
                      </div>
                   </div>
                   <div>
                      <div class="text-[10px] text-zinc-500 uppercase">I Have</div>
                      <div class="flex items-center gap-2 bg-zinc-900/50 p-3 rounded-lg">
                         <span class="text-3xl font-mono font-bold text-white">{{ optimalQuantity() }}</span>
-                        <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" class="w-7 h-7" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                        <img [src]="'/assets/poe-ninja/' + marketItem.detailsId + '.png'" [alt]="marketItem.name" class="w-7 h-7" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                      </div>
                   </div>
                 }
@@ -292,10 +298,10 @@ type InvestmentMode = keyof typeof INVESTMENT_MODES;
     </div>
   `
 })
-export class CreateOrderComponent {
-  @Input({ required: true }) marketItem!: any;
+export class CreateOrderComponent implements OnInit {
+  @Input({ required: true }) marketItem!: MarketItem;
   @Input() initialOrderType: 'BUY' | 'SELL' = 'BUY';
-  @Output() close = new EventEmitter<void>();
+  @Output() closed = new EventEmitter<void>();
   @Output() created = new EventEmitter<void>();
 
   private trpc = inject(TRPC_CLIENT);
@@ -439,9 +445,9 @@ export class CreateOrderComponent {
   });
   
   public isSubmitting = signal(false);
-  public walletData = signal<any>(null); // Cache wallet data
-  public inventoryLots = signal<any[]>([]); // Inventory lots for SELL mode
-  public selectedLot = signal<any | null>(null); // Currently selected lot for SELL
+  public walletData = signal<Wallet | null>(null); // Cache wallet data
+  public inventoryLots = signal<InventoryLot[]>([]); // Inventory lots for SELL mode
+  public selectedLot = signal<InventoryLot | null>(null); // Currently selected lot for SELL
 
   public totalCost = computed(() => this.totalPrice());
 
@@ -549,7 +555,7 @@ export class CreateOrderComponent {
       }
   }
 
-  selectLot(lot: any) {
+  selectLot(lot: InventoryLot) {
       this.selectedLot.set(lot);
       // Auto-fill quantity from the lot
       this.quantity.set(lot.quantity);
@@ -560,14 +566,14 @@ export class CreateOrderComponent {
   availableCurrency() {
       const w = this.walletData();
       if (!w) return 0;
-      const b = w.balances.find((x: any) => x.currency === 'DIVINE');
+      const b = w.balances.find((x) => x.currency === 'DIVINE');
       return b ? b.amount : 0;
   }
 
   availableInventory() {
       const w = this.walletData();
       if (!w) return 0;
-      const inv = w.inventory?.find((x: any) => x.marketItemId === this.marketItem.id);
+      const inv = w.inventory?.find((x) => x.marketItemId === this.marketItem.id);
       return inv ? inv.quantity : 0;
   }
 
@@ -603,7 +609,6 @@ export class CreateOrderComponent {
       this.isSubmitting.set(true);
       
       try {
-          // @ts-ignore
           await this.trpc.orders.createOrder.mutate({
               marketItemId: this.marketItem.id,
               type: this.orderType(),
@@ -613,10 +618,10 @@ export class CreateOrderComponent {
               strategy: this.investmentMode() ? 'DIVINE_FLIP' : undefined
           });
           this.created.emit();
-          this.close.emit();
+          this.closed.emit();
       } catch (err) {
           console.error("Order failed", err);
-          alert("Order Creation Failed: " + (err as any).message);
+          alert("Order Creation Failed: " + (err as Error).message);
       } finally {
           this.isSubmitting.set(false);
       }

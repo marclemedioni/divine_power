@@ -47,7 +47,7 @@ export interface OracleAnalysisItem {
 }
 
 // Helper for RSI
-function calculateRSI(prices: number[], periods: number = 14): number {
+function calculateRSI(prices: number[], periods = 14): number {
   if (prices.length < periods + 1) return 50;
   
   let gains = 0;

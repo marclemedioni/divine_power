@@ -1,10 +1,11 @@
-import { Component, inject, resource, computed, signal, PLATFORM_ID, effect } from '@angular/core';
-import { CommonModule, CurrencyPipe, DecimalPipe, isPlatformBrowser } from '@angular/common'; // Import CommonModule for pipes
+import { Component, inject, resource, computed, signal, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common'; // Import CommonModule for pipes
 import { RouterLink } from '@angular/router';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { TRPC_CLIENT } from '../trpc.token';
 import { CreateOrderComponent } from '../components/create-order.component';
 import { ResolveOrderComponent } from '../components/resolve-order.component';
+import { MarketItem, Order, Inventory } from '../interfaces';
 
 @Component({
   selector: 'app-index',
@@ -24,7 +25,7 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
                 <!-- Wealth Card -->
                 <div class="rich-panel p-6 rounded-2xl relative overflow-hidden group">
                      <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <img src="/assets/poe-ninja/divine-orb.png" class="w-24 h-24 object-contain">
+                        <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-24 h-24 object-contain">
                      </div>
                      
                      <div class="relative z-10">
@@ -40,7 +41,7 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
                              <span class="text-5xl font-mono font-bold text-white tracking-tighter">
                                 {{ totalWealth() | number:'1.0-2' }}
                              </span>
-                             <img src="/assets/poe-ninja/divine-orb.png" class="w-10 h-10 object-contain ml-2 mt-2">
+                             <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-10 h-10 object-contain ml-2 mt-2">
                         </div>
                         <div class="mt-4 flex gap-4">
                             <a routerLink="/wallet" class="btn-ghost text-xs flex items-center gap-2">
@@ -71,7 +72,7 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
                                  @for (order of topPendingOrders(); track order.id) {
                                      <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-zinc-950/30 border border-zinc-800/50">
                                          <div class="flex items-center gap-3 min-w-0">
-                                             <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" class="w-8 h-8 object-contain bg-zinc-900 rounded p-1 border border-zinc-800" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                                             <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" [alt]="order.marketItem.name" class="w-8 h-8 object-contain bg-zinc-900 rounded p-1 border border-zinc-800" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                                              <div class="min-w-0"> 
                                                  <div class="text-xs font-bold text-white truncate">{{ order.marketItem.name }}</div>
                                                  <div class="text-[10px] text-zinc-500">
@@ -122,7 +123,7 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
                                  @for (invItem of topVaultItems(); track invItem.id) {
                                      <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-zinc-950/30 border border-zinc-800/50 group/item">
                                          <div class="flex items-center gap-3 min-w-0">
-                                             <img [src]="'/assets/poe-ninja/' + invItem.marketItem.detailsId + '.png'" class="w-8 h-8 object-contain bg-zinc-900 rounded p-1 border border-zinc-800" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                                             <img [src]="'/assets/poe-ninja/' + invItem.marketItem.detailsId + '.png'" [alt]="invItem.marketItem.name" class="w-8 h-8 object-contain bg-zinc-900 rounded p-1 border border-zinc-800" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                                              <div class="min-w-0"> 
                                                  <div class="text-xs font-bold text-white truncate">{{ invItem.marketItem.name }}</div>
                                                  <div class="text-[10px] text-zinc-500">
@@ -190,13 +191,15 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     @for (item of topMovers(); track item.id) {
                          <div class="bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl flex items-center gap-3 hover:bg-zinc-800/50 transition-colors group relative">
-                            <a [routerLink]="['/market', item.detailsId]" class="absolute inset-0 z-0"></a>
-                            <img [src]="item.image" class="w-10 h-10 object-contain relative z-10 pointer-events-none" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                            <a [routerLink]="['/market', item.detailsId]" class="absolute inset-0 z-0">
+                                <span class="sr-only">View {{ item.name }} market details</span>
+                            </a>
+                            <img [src]="item.image" [alt]="item.name" class="w-10 h-10 object-contain relative z-10 pointer-events-none" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                             <div class="min-w-0 relative z-10 pointer-events-none">
                                 <div class="text-white font-bold text-sm truncate">{{ item.name }}</div>
                                 <div class="text-zinc-400 text-xs font-mono flex items-center gap-1">
                                     {{ getDivinePrice(item) | number:'1.1-2' }}
-                                    <img src="/assets/poe-ninja/divine-orb.png" class="w-4 h-4 object-contain">
+                                    <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-4 h-4 object-contain">
                                 </div>
                             </div>
                             
@@ -231,19 +234,19 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
         </div>
 
         <!-- Modals -->
-        @if (tradeModalOpen() && selectedMarketItem()) {
+        @if (tradeModalOpen() && selectedMarketItem(); as item) {
             <app-create-order
-                [marketItem]="selectedMarketItem()"
+                [marketItem]="item"
                 [initialOrderType]="tradeStartMode()"
-                (close)="tradeModalOpen.set(false)"
+                (closed)="tradeModalOpen.set(false)"
                 (created)="onOrderCreated()"
             ></app-create-order>
         }
 
-        @if (resolveModalOpen() && selectedOrder()) {
+        @if (resolveModalOpen() && selectedOrder(); as order) {
             <app-resolve-order
-                [order]="selectedOrder()"
-                (close)="resolveModalOpen.set(false)"
+                [order]="order"
+                (closed)="resolveModalOpen.set(false)"
                 (resolved)="onResolved($event)"
             ></app-resolve-order>
         }
@@ -279,11 +282,11 @@ export default class CockpitPage {
     const history = this.wealthHistoryResource.value() ?? [];
     if (history.length === 0) return {};
 
-    const dates = history.map((h: any) => {
+    const dates = history.map((h) => {
       const d = new Date(h.timestamp);
       return `${d.getMonth() + 1}/${d.getDate()}`;
     });
-    const values = history.map((h: any) => h.totalWealth);
+    const values = history.map((h) => h.totalWealth);
 
     return {
       backgroundColor: 'transparent',
@@ -292,8 +295,8 @@ export default class CockpitPage {
         backgroundColor: 'rgba(24, 24, 27, 0.9)',
         borderColor: '#3f3f46',
         textStyle: { color: '#fff' },
-        formatter: (params: any) => {
-          const p = params[0];
+        formatter: (params: unknown) => {
+          const p = (Array.isArray(params) ? params[0] : params) as { name: string; value: number };
           return `<strong>${p.name}</strong><br/>Wealth: ${p.value.toFixed(2)} div`;
         }
       },
@@ -357,30 +360,30 @@ export default class CockpitPage {
   
   // Wealth Calculation
   totalWealth = computed(() => {
-     const wallet = this.walletResource.value() as any;
+     const wallet = this.walletResource.value();
      if (!wallet) return 0;
 
      // We need market prices to calculate total wealth in Divines
-     const market = this.marketResource.value() as any[];
+     const market = this.marketResource.value();
      if (!market) return 0; 
 
-     const divBalance = wallet.balances.find((b: any) => b.currency === 'DIVINE')?.amount ?? 0;
-     const chaosBalance = wallet.balances.find((b: any) => b.currency === 'CHAOS')?.amount ?? 0;
-     const exBalance = wallet.balances.find((b: any) => b.currency === 'EXALTED')?.amount ?? 0;
+     const divBalance = wallet.balances.find((b) => b.currency === 'DIVINE')?.amount ?? 0;
+     const chaosBalance = wallet.balances.find((b) => b.currency === 'CHAOS')?.amount ?? 0;
+     const exBalance = wallet.balances.find((b) => b.currency === 'EXALTED')?.amount ?? 0;
 
-     const chaosPrice = market.find((i: any) => i.detailsId === 'chaos-orb')?.primaryValue ?? 0;
-     const exPrice = market.find((i: any) => i.detailsId === 'exalted-orb')?.primaryValue ?? 0;
+     const chaosPrice = market.find((i) => i.detailsId === 'chaos-orb')?.primaryValue ?? 0;
+     const exPrice = market.find((i) => i.detailsId === 'exalted-orb')?.primaryValue ?? 0;
 
      return divBalance + (chaosBalance * chaosPrice) + (exBalance * exPrice);
   });
 
   activeOrdersCount = computed(() => {
-      const orders = (this.ordersResource.value() as any[]) ?? [];
+      const orders = this.ordersResource.value() ?? [];
       return orders.filter(o => o.status === 'PENDING').length;
   });
 
   topPendingOrders = computed(() => {
-      const orders = (this.ordersResource.value() as any[]) ?? [];
+      const orders = this.ordersResource.value() ?? [];
       return orders
         .filter(o => o.status === 'PENDING')
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -388,16 +391,16 @@ export default class CockpitPage {
   });
 
   vaultItemCount = computed(() => {
-      const wallet = this.walletResource.value() as any;
-      const items = (wallet?.inventory as any[]) ?? [];
+      const wallet = this.walletResource.value();
+      const items = wallet?.inventory ?? [];
       return items.filter(i => i.quantity > 0).length;
   });
 
   topVaultItems = computed(() => {
-      const wallet = this.walletResource.value() as any;
+      const wallet = this.walletResource.value();
       if (!wallet || !wallet.inventory) return [];
       
-      return (wallet.inventory as any[])
+      return (wallet.inventory as Inventory[])
           .filter(item => item.quantity > 0)
           .map(item => ({
               ...item,
@@ -408,7 +411,7 @@ export default class CockpitPage {
   });
 
   topMovers = computed(() => {
-      const market = (this.marketResource.value() as any[]) ?? [];
+      const market = this.marketResource.value() ?? [];
       // Just taking the first 4 for now as "highlights"
       return market.slice(0, 4);
   });
@@ -428,16 +431,16 @@ export default class CockpitPage {
 
   // Trade Modal
   public tradeModalOpen = signal(false);
-  public selectedMarketItem = signal<any>(null);
+  public selectedMarketItem = signal<MarketItem | null>(null);
   public tradeStartMode = signal<'BUY' | 'SELL'>('BUY');
 
-  openTrade(item: any) {
+  openTrade(item: MarketItem) {
       this.selectedMarketItem.set(item);
       this.tradeStartMode.set('BUY');
       this.tradeModalOpen.set(true);
   }
 
-  openSell(item: any) {
+  openSell(item: MarketItem) {
       this.selectedMarketItem.set(item);
       this.tradeStartMode.set('SELL');
       this.tradeModalOpen.set(true);
@@ -449,9 +452,9 @@ export default class CockpitPage {
 
   // Resolution Modal
   public resolveModalOpen = signal(false);
-  public selectedOrder = signal<any>(null);
+  public selectedOrder = signal<Order | null>(null);
 
-  openResolve(order: any) {
+  openResolve(order: Order) {
       this.selectedOrder.set(order);
       this.resolveModalOpen.set(true);
   }
@@ -461,7 +464,6 @@ export default class CockpitPage {
       if (!order) return;
 
       try {
-          // @ts-ignore
           await this.trpc.orders.resolveOrder.mutate({
               orderId: order.id,
               fulfilledQuantity: event.quantity,
@@ -471,12 +473,12 @@ export default class CockpitPage {
           this.resolveModalOpen.set(false);
       } catch (e) {
           console.error("Failed to resolve", e);
-          alert("Error: " + (e as any).message);
+          alert("Error: " + (e as Error).message);
       }
   }
 
-  getDivinePrice(item: any): number {
-      return item.pairs?.find((p: any) => p.currencyId === 'divine')?.rate ?? 0;
+  getDivinePrice(item: MarketItem): number {
+      return item.pairs?.find((p) => p.currencyId === 'divine')?.rate ?? 0;
   }
 }
 

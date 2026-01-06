@@ -1,4 +1,4 @@
-import { Component, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, PLATFORM_ID, inject } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { NotificationService } from './services/notification.service';
@@ -155,19 +155,12 @@ import { NotificationService } from './services/notification.service';
   `,
 })
 export class AppComponent {
-  private notifiedOrders = new Set<string>();
+  public notify = inject(NotificationService);
+  private platformId = inject(PLATFORM_ID);
 
-  constructor(
-    public notify: NotificationService, 
-    @Inject(PLATFORM_ID) private platformId: Object
-  ) {
+  constructor() {
     if (isPlatformBrowser(this.platformId)) {
-      this.startPolling();
       this.notify.requestPermission();
     }
-  }
-
-  startPolling() {
-    
   }
 }

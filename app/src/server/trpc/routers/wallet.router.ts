@@ -113,8 +113,10 @@ export const walletRouter = router({
       });
     }
 
-    // Should always be there due to creation logic
-    return user.wallet!;
+    if (!user.wallet) {
+      throw new Error('Wallet not initialized');
+    }
+    return user.wallet;
   }),
 
   updateBalance: publicProcedure
@@ -124,7 +126,7 @@ export const walletRouter = router({
     }))
     .mutation(async ({ input }) => {
       // Ensure user and wallet exist
-      let user = await prisma.user.findUnique({
+      const user = await prisma.user.findUnique({
          where: { email: 'default@user.com' },
          include: { wallet: true }
       });

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { TRPC_CLIENT } from '../trpc.token';
 import { CreateOrderComponent } from '../components/create-order.component';
 import { MarketItemDetailsComponent } from '../components/market-item-details.component';
+import { OracleAnalysisItem, MarketItem } from '../interfaces';
 
 type SortField = 'tradability' | 'volume' | 'change' | 'price';
 type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
@@ -108,7 +109,13 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
               </div>
               
               <!-- Header Row -->
-              <div class="flex items-start gap-4 mb-6 cursor-pointer" (click)="selectedDetailsId.set(item.detailsId)">
+              <div 
+                class="flex items-start gap-4 mb-6 cursor-pointer" 
+                (click)="selectedDetailsId.set(item.detailsId)"
+                (keydown.enter)="selectedDetailsId.set(item.detailsId)"
+                (keydown.space)="selectedDetailsId.set(item.detailsId); $event.preventDefault()"
+                tabindex="0"
+                role="button">
                 <div class="w-14 h-14 bg-zinc-950 rounded-xl border border-zinc-800 p-2 flex items-center justify-center shrink-0 shadow-inner group-hover:border-purple-500/50 transition-colors">
                   <img [src]="'/assets/poe-ninja/' + item.detailsId + '.png'" 
                        [alt]="item.name" 
@@ -131,7 +138,7 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
                   <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Current Price</div>
                   <div class="text-lg font-mono font-bold text-white flex items-center gap-1.5">
                     {{ item.currentPrice | number:'1.2-4' }}
-                    <img src="/assets/poe-ninja/divine-orb.png" class="w-4 h-4 object-contain opacity-80">
+                    <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-4 h-4 object-contain opacity-80">
                   </div>
                 </div>
                 <div class="text-right">
@@ -237,10 +244,10 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
       </div>
 
       <!-- Trade Modal -->
-      @if (tradeModalOpen() && selectedItem()) {
+      @if (tradeModalOpen() && selectedItem(); as item) {
         <app-create-order
-          [marketItem]="selectedItem()"
-          (close)="tradeModalOpen.set(false)"
+          [marketItem]="item"
+          (closed)="tradeModalOpen.set(false)"
           (created)="onOrderCreated()"
         ></app-create-order>
       }
@@ -249,13 +256,18 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
       @if (selectedDetailsId(); as id) {
         <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <!-- Backdrop -->
-            <div (click)="selectedDetailsId.set(null)" class="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
+            <div 
+              (click)="selectedDetailsId.set(null)" 
+              (keydown.escape)="selectedDetailsId.set(null)"
+              tabindex="-1"
+              role="presentation"
+              class="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
             
             <!-- Modal Content -->
             <div class="relative w-full max-w-6xl z-10">
                 <app-market-item-details 
                     [detailsId]="id"
-                    (close)="selectedDetailsId.set(null)"
+                    (closed)="selectedDetailsId.set(null)"
                 />
             </div>
         </div>
@@ -323,7 +335,7 @@ export default class OraclePage {
 
   // Trade Modal
   public tradeModalOpen = signal(false);
-  public selectedItem = signal<any>(null);
+  public selectedItem = signal<MarketItem | null>(null);
 
   setFilter(filter: FilterType) {
     this.activeFilter.set(filter);
@@ -351,7 +363,7 @@ export default class OraclePage {
     this.userHasManuallySorted.set(true);
   }
 
-  openTrade(item: any) {
+  openTrade(item: OracleAnalysisItem) {
     // Transform to match MarketItem interface for CreateOrderComponent
     this.selectedItem.set({
       id: item.id,
@@ -369,7 +381,7 @@ export default class OraclePage {
     this.analysisResource.reload();
   }
 
-  getRiskLevel(item: any) {
+  getRiskLevel(item: OracleAnalysisItem) {
     if (item.volatility > 15 || item.rsi > 70 || item.currentPrice > item.bollingerUpper) {
       return { label: 'High Risk', class: 'bg-red-500/20 text-red-400 border-red-500/30' };
     }
@@ -379,7 +391,7 @@ export default class OraclePage {
     return { label: 'Safe', class: 'bg-green-500/20 text-green-400 border-green-500/30' };
   }
 
-  getPricePositionLabel(item: any) {
+  getPricePositionLabel(item: OracleAnalysisItem) {
     const range = item.bollingerUpper - item.bollingerLower;
     if (range === 0) return 'Stable';
     const pos = (item.currentPrice - item.bollingerLower) / range;

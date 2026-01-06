@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { TRPC_CLIENT } from '../trpc.token';
 import { Currency } from '@prisma/client';
 import { DialogComponent } from '../components/ui/dialog.component';
+import { Wallet, MarketItem } from '../interfaces';
 
 @Component({
   selector: 'app-wallet-page',
@@ -144,12 +145,13 @@ import { DialogComponent } from '../components/ui/dialog.component';
         <app-dialog [title]="'Update ' + editingCurrency()" #editDialog>
           <div class="flex flex-col gap-6">
             <div>
-              <label class="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">New Balance</label>
+              <label for="new-balance" class="block text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">New Balance</label>
               <div class="relative group">
                 <input 
                   type="number" 
                   [ngModel]="editAmount()"
                   (ngModelChange)="editAmount.set($event)"
+                  id="new-balance"
                   class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-4 text-white font-mono text-xl focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 focus:outline-none transition-all placeholder:text-zinc-700"
                   placeholder="0"
                   (keydown.enter)="saveUpdate()"
@@ -210,14 +212,14 @@ export default class WalletPage {
   });
 
   private getBalance(currency: Currency): number {
-    const wallet = this.walletResource.value() as any;
-    return wallet?.balances?.find((b: any) => b.currency === currency)?.amount ?? 0;
+    const wallet = this.walletResource.value() as Wallet;
+    return wallet?.balances.find((b) => b.currency === currency)?.amount ?? 0;
   }
 
   private getPriceInRange(detailsId: string): number | null {
-      const market = this.marketResource.value() as any[];
+      const market = this.marketResource.value() as MarketItem[];
       if (!market) return null;
-      const item = market.find((i: any) => i.detailsId === detailsId);
+      const item = market.find((i) => i.detailsId === detailsId);
       // Ensure we have a valid primary value (Value in Divine)
       return item?.primaryValue ?? null;
   }
@@ -225,7 +227,7 @@ export default class WalletPage {
   openEditModal(currency: string, currentAmount: number) {
     this.editingCurrency.set(currency);
     this.editAmount.set(currentAmount);
-    this.editDialog.open();
+    this.editDialog.show();
   }
 
   async saveUpdate() {

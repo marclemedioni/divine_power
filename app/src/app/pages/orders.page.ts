@@ -5,8 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { TRPC_CLIENT } from '../trpc.token';
 import { withTransferCache } from '../trpc.utils';
 import { ResolveOrderComponent } from '../components/resolve-order.component';
+import { Order } from '../interfaces';
 
-import { OrderStatus, OrderType, Order } from '../services/models';
+
 
 @Component({
   selector: 'app-orders',
@@ -48,7 +49,7 @@ import { OrderStatus, OrderType, Order } from '../services/models';
                <div class="flex items-center gap-4">
                    <!-- Icon -->
                    <div class="w-12 h-12 bg-zinc-950 rounded-lg border border-zinc-800 p-1 flex items-center justify-center">
-                        <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" class="w-full h-full object-contain">
+                         <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" [alt]="order.marketItem.name" class="w-full h-full object-contain">
                    </div>
                    
                    <div>
@@ -108,10 +109,10 @@ import { OrderStatus, OrderType, Order } from '../services/models';
 
 
       <!-- Resolution Modal -->
-      @if (resolveModalOpen() && selectedOrder()) {
+      @if (resolveModalOpen() && selectedOrder(); as order) {
           <app-resolve-order
-            [order]="selectedOrder()"
-            (close)="resolveModalOpen.set(false)"
+            [order]="order"
+            (closed)="resolveModalOpen.set(false)"
             (resolved)="onResolved($event)"
           ></app-resolve-order>
       }
@@ -131,16 +132,16 @@ export default class OrdersPage {
   });
 
   public filteredOrders = computed(() => {
-     const orders = (this.ordersResource.value() as any) ?? [];
-     return orders.filter((o: any) => o.status === this.activeTab());
+     const orders = (this.ordersResource.value() as Order[]) ?? [];
+     return orders.filter((o) => o.status === this.activeTab());
   });
 
 
   // Resolution Logic
   public resolveModalOpen = signal(false);
-  public selectedOrder = signal<any>(null);
+  public selectedOrder = signal<Order | null>(null);
 
-  openResolve(order: any) {
+  openResolve(order: Order) {
       this.selectedOrder.set(order);
       this.resolveModalOpen.set(true);
   }
@@ -150,7 +151,7 @@ export default class OrdersPage {
       if (!order) return;
 
       try {
-          // @ts-ignore
+
           await this.trpc.orders.resolveOrder.mutate({
               orderId: order.id,
               fulfilledQuantity: event.quantity,
@@ -160,14 +161,14 @@ export default class OrdersPage {
           this.resolveModalOpen.set(false);
       } catch (e) {
           console.error("Failed to resolve", e);
-          alert("Error: " + (e as any).message);
+          alert("Error: " + (e as Error).message);
       }
   }
 
   async cancel(orderId: string) {
       if (!confirm("Cancel this order?")) return;
       try {
-           // @ts-ignore
+
           await this.trpc.orders.cancelOrder.mutate({ orderId });
           this.ordersResource.reload();
       } catch (e) {

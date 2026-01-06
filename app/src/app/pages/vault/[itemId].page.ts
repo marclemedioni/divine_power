@@ -1,5 +1,5 @@
 import { Component, inject, resource, computed, signal } from '@angular/core';
-import { CommonModule, Location } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TRPC_CLIENT } from '../../trpc.token';
 import { withTransferCache } from '../../trpc.utils';

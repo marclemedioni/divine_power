@@ -2,6 +2,7 @@ import { Component, inject, resource, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TRPC_CLIENT } from '../../trpc.token';
+import { Inventory } from '../../interfaces';
 
 @Component({
   selector: 'app-vault-page',
@@ -63,8 +64,8 @@ export default class VaultPage {
   });
 
   inventory = computed(() => {
-    const wallet = this.walletResource.value() as any;
-    const items = (wallet?.inventory as any[]) ?? [];
+    const wallet = this.walletResource.value();
+    const items = (wallet?.inventory as Inventory[]) ?? [];
     return items.filter(item => item.quantity > 0);
   });
 }

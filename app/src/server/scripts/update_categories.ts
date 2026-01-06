@@ -1,6 +1,6 @@
 
 import { PrismaPg } from '@prisma/adapter-pg'
-import * as pg from 'pg';
+
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);

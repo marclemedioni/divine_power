@@ -9,7 +9,7 @@ import { isPlatformBrowser } from '@angular/common';
  * 
  * Must be called in an Injection Context.
  */
-export function withTransferCache<T, Args extends any[]>(
+export function withTransferCache<T, Args extends unknown[]>(
   keyName: string,
   loader: (...args: Args) => Promise<T>
 ): (...args: Args) => Promise<T> {
@@ -21,8 +21,10 @@ export function withTransferCache<T, Args extends any[]>(
     // 1. Client: Check TransferState
     if (transferState.hasKey(key)) {
       const cached = transferState.get(key, null);
-      transferState.remove(key); // Important: Remove to ensure fresh data on next params change
-      return cached!;
+      if (cached !== null) {
+        transferState.remove(key); // Important: Remove to ensure fresh data on next params change
+        return cached;
+      }
     }
 
     // 2. Execute Loader

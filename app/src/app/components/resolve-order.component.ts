@@ -1,6 +1,7 @@
-import { Component, Input, Output, EventEmitter, signal, computed } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Order } from '../interfaces';
 
 @Component({
   selector: 'app-resolve-order',
@@ -8,15 +9,20 @@ import { FormsModule } from '@angular/forms';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" (click)="$event.stopPropagation()">
+      <div 
+        class="bg-zinc-900 border border-zinc-800 rounded-xl max-w-lg w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" 
+        (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
+        tabindex="-1"
+        role="presentation">
         
         <!-- Header -->
         <div class="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950/50">
           <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" class="w-6 h-6 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+            <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" [alt]="order.marketItem.name" class="w-6 h-6 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
             <span class="text-green-400">Resolve</span> {{ order.marketItem.name }}
           </h2>
-          <button (click)="close.emit()" class="text-zinc-500 hover:text-white transition-colors">
+          <button (click)="closed.emit()" class="text-zinc-500 hover:text-white transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
@@ -47,16 +53,17 @@ import { FormsModule } from '@angular/forms';
           <!-- What You Got -->
           <div class="space-y-4 bg-zinc-950 p-4 rounded-lg border border-zinc-800">
             <div class="space-y-2">
-              <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Quantity Received</label>
+              <label for="actual-quantity" class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Quantity Received</label>
               <div class="relative">
                 <input 
+                  id="actual-quantity"
                   type="number"
                   step="1"
                   [(ngModel)]="actualQuantity"
                   class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 pr-10 text-white font-mono focus:border-green-500 outline-none text-sm"
                 >
                 <div class="absolute right-3 top-2.5 flex items-center h-5">
-                  <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" class="w-5 h-5 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                    <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" [alt]="order.marketItem.name" class="w-5 h-5 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                 </div>
               </div>
             </div>
@@ -64,9 +71,10 @@ import { FormsModule } from '@angular/forms';
             <!-- Remainder/Change -->
             @if (order.type === 'BUY') {
               <div class="space-y-2">
-                <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Change Received (Divines)</label>
+                <label for="remainder-divines" class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Change Received (Divines)</label>
                 <div class="relative">
                   <input 
+                    id="remainder-divines"
                     type="number"
                     step="0.01"
                     [(ngModel)]="remainderDivines"
@@ -74,16 +82,17 @@ import { FormsModule } from '@angular/forms';
                     class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 pr-10 text-white font-mono focus:border-green-500 outline-none text-sm"
                   >
                   <div class="absolute right-3 top-2.5 flex items-center h-5">
-                    <img src="/assets/poe-ninja/divine-orb.png" class="w-5 h-5 object-contain">
+                    <img src="/assets/poe-ninja/divine-orb.png" alt="Divine Orb" class="w-5 h-5 object-contain">
                   </div>
                 </div>
                 <div class="text-xs text-zinc-500">If they gave you back any divines</div>
               </div>
             } @else {
               <div class="space-y-2">
-                <label class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Change Received (Items)</label>
+                <label for="remainder-items" class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Change Received (Items)</label>
                 <div class="relative">
                   <input 
+                    id="remainder-items"
                     type="number"
                     step="1"
                     [(ngModel)]="remainderItems"
@@ -91,7 +100,7 @@ import { FormsModule } from '@angular/forms';
                     class="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-2.5 pr-10 text-white font-mono focus:border-green-500 outline-none text-sm"
                   >
                   <div class="absolute right-3 top-2.5 flex items-center h-5">
-                    <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" class="w-5 h-5 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
+                    <img [src]="'/assets/poe-ninja/' + order.marketItem.detailsId + '.png'" [alt]="order.marketItem.name" class="w-5 h-5 object-contain" onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                   </div>
                 </div>
                 <div class="text-xs text-zinc-500">If they gave you back any items</div>
@@ -121,7 +130,7 @@ import { FormsModule } from '@angular/forms';
           <!-- Action -->
           <div class="flex gap-3">
             <button 
-              (click)="close.emit()"
+              (click)="closed.emit()"
               class="flex-1 py-3 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors"
             >
               Cancel
@@ -140,9 +149,9 @@ import { FormsModule } from '@angular/forms';
     </div>
   `
 })
-export class ResolveOrderComponent {
-  @Input({ required: true }) order!: any;
-  @Output() close = new EventEmitter<void>();
+export class ResolveOrderComponent implements OnInit {
+  @Input({ required: true }) order!: Order;
+  @Output() closed = new EventEmitter<void>();
   @Output() resolved = new EventEmitter<{ quantity: number; pricePerUnit: number }>();
 
   public actualQuantity = signal(0);
