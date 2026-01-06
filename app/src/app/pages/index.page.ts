@@ -40,7 +40,7 @@ import { ResolveOrderComponent } from '../components/resolve-order.component';
                              <span class="text-5xl font-mono font-bold text-white tracking-tighter">
                                 {{ totalWealth() | number:'1.0-2' }}
                              </span>
-                             <span class="text-xl text-amber-500 font-bold">div</span>
+                             <img src="/assets/poe-ninja/divine-orb.png" class="w-10 h-10 object-contain ml-2 mt-2">
                         </div>
                         <div class="mt-4 flex gap-4">
                             <a routerLink="/wallet" class="btn-ghost text-xs flex items-center gap-2">
@@ -420,7 +420,8 @@ export default class CockpitPage {
       await Promise.all([
           this.walletResource.reload(),
           this.ordersResource.reload(),
-          this.marketResource.reload()
+          this.marketResource.reload(),
+          this.wealthHistoryResource.reload()
       ]);
       this.loading.set(false);
   }

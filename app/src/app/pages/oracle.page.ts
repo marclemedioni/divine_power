@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TRPC_CLIENT } from '../trpc.token';
 import { CreateOrderComponent } from '../components/create-order.component';
+import { MarketItemDetailsComponent } from '../components/market-item-details.component';
 
 type SortField = 'tradability' | 'volume' | 'change' | 'price';
 type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
@@ -10,7 +11,7 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
 @Component({
   selector: 'app-oracle',
   standalone: true,
-  imports: [CommonModule, FormsModule, CreateOrderComponent],
+  imports: [CommonModule, FormsModule, CreateOrderComponent, MarketItemDetailsComponent],
   template: `
     <div class="h-full p-8 animate-in fade-in duration-700 pb-20">
       <div class="max-w-7xl mx-auto">
@@ -82,15 +83,24 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
         }
 
         <!-- Analysis Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           @for (item of filteredAndSortedItems(); track item.id) {
             <div 
-              (click)="openTrade(item)"
-              class="rich-panel p-5 rounded-xl cursor-pointer group hover:border-purple-500/30 transition-all relative overflow-hidden">
+              class="rich-panel p-6 rounded-2xl group transition-all relative overflow-hidden flex flex-col h-full bg-zinc-900/40 backdrop-blur-sm border border-zinc-800">
               
+              <!-- Risk Level Badge (Top Right) -->
+              <div class="absolute top-4 right-4 z-10">
+                @let risk = getRiskLevel(item);
+                <span 
+                  [class]="risk.class"
+                  class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border">
+                  {{ risk.label }}
+                </span>
+              </div>
+
               <!-- Tradability Score Bar (background) -->
               <div 
-                class="absolute bottom-0 left-0 h-1 transition-all"
+                class="absolute bottom-0 left-0 h-1 transition-all opacity-50"
                 [style.width.%]="item.tradabilityScore"
                 [class.bg-green-500]="item.tradabilityScore >= 60"
                 [class.bg-yellow-500]="item.tradabilityScore >= 30 && item.tradabilityScore < 60"
@@ -98,44 +108,34 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
               </div>
               
               <!-- Header Row -->
-              <div class="flex items-start justify-between gap-3 mb-4">
-                <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 bg-zinc-900 rounded-lg border border-zinc-800 p-1 flex items-center justify-center shrink-0">
-                    <img [src]="'/assets/poe-ninja/' + item.detailsId + '.png'" 
-                         [alt]="item.name" 
-                         class="w-full h-full object-contain"
-                         onerror="this.src='/assets/poe-ninja/divine-orb.png'">
-                  </div>
-                  <div class="min-w-0">
-                    <div class="text-white font-bold text-sm truncate">{{ item.name }}</div>
-                    <div class="text-xs text-zinc-500">{{ item.category }}</div>
-                  </div>
+              <div class="flex items-start gap-4 mb-6 cursor-pointer" (click)="selectedDetailsId.set(item.detailsId)">
+                <div class="w-14 h-14 bg-zinc-950 rounded-xl border border-zinc-800 p-2 flex items-center justify-center shrink-0 shadow-inner group-hover:border-purple-500/50 transition-colors">
+                  <img [src]="'/assets/poe-ninja/' + item.detailsId + '.png'" 
+                       [alt]="item.name" 
+                       class="w-full h-full object-contain"
+                       onerror="this.src='/assets/poe-ninja/divine-orb.png'">
                 </div>
-                
-                <!-- Tradability Badge -->
-                <div class="text-right shrink-0">
-                  <div 
-                    class="text-2xl font-mono font-bold"
-                    [class.text-green-400]="item.tradabilityScore >= 60"
-                    [class.text-yellow-400]="item.tradabilityScore >= 30 && item.tradabilityScore < 60"
-                    [class.text-red-400]="item.tradabilityScore < 30">
-                    {{ item.tradabilityScore | number:'1.0-0' }}
+                <div class="min-w-0 pr-16">
+                  <div class="text-white font-bold text-base truncate group-hover:text-purple-300 transition-colors">{{ item.name }}</div>
+                  <div class="text-xs text-zinc-500 font-medium">{{ item.category }}</div>
+                  <div class="flex items-center gap-1.5 mt-1">
+                    <div class="w-1.5 h-1.5 rounded-full" [class.bg-green-500]="item.trendDirection === 'rising'" [class.bg-red-500]="item.trendDirection === 'falling'" [class.bg-zinc-500]="item.trendDirection === 'sideways'"></div>
+                    <span class="text-[10px] text-zinc-400 font-bold uppercase tracking-tighter">{{ item.trendDirection }}</span>
                   </div>
-                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Score</div>
                 </div>
               </div>
               
-              <!-- Price & Change -->
-              <div class="flex justify-between items-baseline mb-4 pb-4 border-b border-zinc-800">
+              <!-- Price & Performance -->
+              <div class="grid grid-cols-2 gap-4 mb-6 p-3 bg-zinc-950/50 rounded-xl border border-zinc-800/50">
                 <div>
-                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">Price</div>
-                  <div class="text-lg font-mono font-bold text-white flex items-center gap-1">
+                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Current Price</div>
+                  <div class="text-lg font-mono font-bold text-white flex items-center gap-1.5">
                     {{ item.currentPrice | number:'1.2-4' }}
-                    <img src="/assets/poe-ninja/divine-orb.png" class="w-4 h-4 object-contain">
+                    <img src="/assets/poe-ninja/divine-orb.png" class="w-4 h-4 object-contain opacity-80">
                   </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">24h Change</div>
+                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">24h Gain</div>
                   <div 
                     class="text-lg font-mono font-bold"
                     [class.text-green-400]="item.change24h >= 0"
@@ -144,61 +144,85 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
                   </div>
                 </div>
               </div>
-              
+
               <!-- Indicators Grid -->
-              <div class="grid grid-cols-3 gap-3">
-                <!-- Volume -->
-                <div class="text-center">
-                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Volume</div>
-                  <div class="relative h-2 bg-zinc-800 rounded-full overflow-hidden mb-1">
-                    <div class="absolute inset-y-0 left-0 bg-blue-500 rounded-full" [style.width.%]="item.volumeScore"></div>
+              <div class="space-y-4 flex-grow">
+                <!-- Safety Metrics -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="p-2.5 bg-zinc-900/50 rounded-lg border border-zinc-800">
+                    <div class="text-[9px] text-zinc-500 uppercase font-bold mb-1">Floor Proximity</div>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-sm font-mono font-bold" [class.text-green-400]="item.floorProximity < 5" [class.text-zinc-300]="item.floorProximity >= 5">+{{ item.floorProximity | number:'1.1-1' }}%</span>
+                      <span class="text-[9px] text-zinc-600">above 48h low</span>
+                    </div>
                   </div>
-                  <div class="text-xs font-mono text-zinc-400">{{ item.volumeScore | number:'1.0-0' }}</div>
+                  <div class="p-2.5 bg-zinc-900/50 rounded-lg border border-zinc-800">
+                    <div class="text-[9px] text-zinc-500 uppercase font-bold mb-1">Stability Score</div>
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-sm font-mono font-bold text-blue-400">{{ item.stabilityScore | number:'1.0-0' }}</span>
+                        <span class="text-[9px] text-zinc-600">/ 100</span>
+                    </div>
+                  </div>
                 </div>
-                
-                <!-- Trend -->
-                <div class="text-center">
-                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Trend</div>
-                  <div 
-                    class="text-lg"
-                    [class.text-green-400]="item.trendDirection === 'rising'"
-                    [class.text-red-400]="item.trendDirection === 'falling'"
-                    [class.text-zinc-500]="item.trendDirection === 'sideways'">
-                    @if (item.trendDirection === 'rising') {
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-auto" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
-                      </svg>
-                    } @else if (item.trendDirection === 'falling') {
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-auto" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M12 13a1 1 0 100 2h5a1 1 0 001-1V9a1 1 0 10-2 0v2.586l-4.293-4.293a1 1 0 00-1.414 0L8 9.586 3.707 5.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0L11 9.414 14.586 13H12z" clip-rule="evenodd" />
-                      </svg>
-                    } @else {
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mx-auto" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4 10a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1z" clip-rule="evenodd" />
-                      </svg>
-                    }
-                  </div>
-                  <div class="text-xs font-mono text-zinc-400 capitalize">{{ item.trendDirection }}</div>
-                </div>
-                
-                <!-- Volatility -->
-                <div class="text-center">
-                  <div class="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Volatility</div>
-                  <div 
-                    class="text-sm font-mono font-bold"
-                    [class.text-green-400]="item.volatility < 5"
-                    [class.text-yellow-400]="item.volatility >= 5 && item.volatility < 15"
-                    [class.text-red-400]="item.volatility >= 15">
-                    {{ item.volatility | number:'1.1-1' }}%
-                  </div>
-                  <div class="text-[10px] text-zinc-500">
-                    {{ item.volatility < 5 ? 'Low' : item.volatility < 15 ? 'Medium' : 'High' }}
-                  </div>
+
+                <!-- Technical Analytics -->
+                <div class="space-y-3 pt-2">
+                   <!-- RSI -->
+                   <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-zinc-500 uppercase font-bold">RSI (14 periods)</span>
+                        <span class="text-[10px] font-bold" 
+                              [class.text-red-400]="item.rsi > 70" 
+                              [class.text-green-400]="item.rsi < 30"
+                              [class.text-zinc-400]="item.rsi >= 30 && item.rsi <= 70">
+                              {{ item.rsi > 70 ? 'Overbought' : item.rsi < 30 ? 'Oversold' : 'Neutral' }}
+                        </span>
+                    </div>
+                    <div class="relative h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div class="absolute top-0 bottom-0 left-[30%] right-[30%] bg-zinc-700/50"></div> <!-- Neutral zone -->
+                        <div class="absolute inset-y-0 left-0 transition-all duration-500" 
+                             [style.width.%]="item.rsi"
+                             [class.bg-green-500]="item.rsi < 30"
+                             [class.bg-red-500]="item.rsi > 70"
+                             [class.bg-blue-500]="item.rsi >= 30 && item.rsi <= 70"></div>
+                    </div>
+                   </div>
+
+                   <!-- Bollinger Bands -->
+                   <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-[10px] text-zinc-500 uppercase font-bold">Bollinger Position</span>
+                        <span class="text-[10px] font-bold text-zinc-400">
+                           {{ getPricePositionLabel(item) }}
+                        </span>
+                    </div>
+                    <div class="relative h-1.5 bg-zinc-800 rounded-full flex items-center">
+                         @let bbRange = item.bollingerUpper - item.bollingerLower;
+                         @let bbPos = bbRange > 0 ? ((item.currentPrice - item.bollingerLower) / bbRange) * 100 : 50;
+                         <div class="w-full h-full bg-zinc-800 absolute"></div>
+                         <div class="absolute left-1/2 -translate-x-1/2 w-0.5 h-full bg-zinc-700"></div> <!-- Mid point -->
+                         <div class="absolute h-3 w-3 bg-white border-2 border-purple-500 rounded-full shadow-lg transition-all duration-500 z-10"
+                              [style.left.%]="bbPos"></div>
+                    </div>
+                   </div>
                 </div>
               </div>
               
+              <!-- Footer / Tradability -->
+              <div class="mt-6 pt-4 border-t border-zinc-800/50 flex items-center justify-between">
+                <div>
+                   <div class="text-[10px] text-zinc-500 uppercase font-bold">Tradability Score</div>
+                   <div class="text-xl font-mono font-extrabold text-white">{{ item.tradabilityScore | number:'1.0-0' }}<span class="text-zinc-600 text-xs ml-0.5">/100</span></div>
+                </div>
+                <button 
+                  (click)="openTrade(item)"
+                  class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg transition-all shadow-lg shadow-purple-900/20 group-hover:scale-105 active:scale-95">
+                  Analyze Deal
+                </button>
+              </div>
+
               <!-- Hover Overlay -->
-              <div class="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+              <div class="absolute inset-0 bg-purple-500/0 group-hover:bg-purple-500/[0.03] transition-colors pointer-events-none"></div>
             </div>
           }
         </div>
@@ -220,6 +244,22 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
           (created)="onOrderCreated()"
         ></app-create-order>
       }
+
+      <!-- Details Modal -->
+      @if (selectedDetailsId(); as id) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <!-- Backdrop -->
+            <div (click)="selectedDetailsId.set(null)" class="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
+            
+            <!-- Modal Content -->
+            <div class="relative w-full max-w-6xl z-10">
+                <app-market-item-details 
+                    [detailsId]="id"
+                    (close)="selectedDetailsId.set(null)"
+                />
+            </div>
+        </div>
+      }
     </div>
   `,
 })
@@ -230,6 +270,7 @@ export default class OraclePage {
   public sortBy = signal<SortField>('tradability');
   public activeFilter = signal<FilterType>('all');
   public userHasManuallySorted = signal(false);
+  public selectedDetailsId = signal<string | null>(null);
 
   public analysisResource = resource({
     loader: () => this.trpc.market.getOracleAnalysis.query()
@@ -326,6 +367,27 @@ export default class OraclePage {
   onOrderCreated() {
     this.tradeModalOpen.set(false);
     this.analysisResource.reload();
+  }
+
+  getRiskLevel(item: any) {
+    if (item.volatility > 15 || item.rsi > 70 || item.currentPrice > item.bollingerUpper) {
+      return { label: 'High Risk', class: 'bg-red-500/20 text-red-400 border-red-500/30' };
+    }
+    if (item.volatility > 8 || item.rsi > 60 || item.rsi < 35) {
+      return { label: 'Moderate', class: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' };
+    }
+    return { label: 'Safe', class: 'bg-green-500/20 text-green-400 border-green-500/30' };
+  }
+
+  getPricePositionLabel(item: any) {
+    const range = item.bollingerUpper - item.bollingerLower;
+    if (range === 0) return 'Stable';
+    const pos = (item.currentPrice - item.bollingerLower) / range;
+    
+    if (pos > 0.9) return 'Upper Bound';
+    if (pos < 0.1) return 'Lower Bound';
+    if (pos > 0.45 && pos < 0.55) return 'Mean Value';
+    return pos > 0.5 ? 'Trending High' : 'Trending Low';
   }
 
   async refresh() {
