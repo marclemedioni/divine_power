@@ -42,14 +42,19 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
         <div class="flex flex-col md:flex-row gap-4 mb-6">
           <!-- Filter Tabs -->
           <div class="flex bg-zinc-900/50 p-1 rounded-lg border border-zinc-800 overflow-x-auto">
-            @for (filter of filters; track filter.value) {
+            @for (filter of filters(); track filter.value) {
               <button
-                (click)="activeFilter.set(filter.value)"
+                (click)="setFilter(filter.value)"
                 [class.bg-zinc-800]="activeFilter() === filter.value"
                 [class.text-white]="activeFilter() === filter.value"
                 [class.text-zinc-500]="activeFilter() !== filter.value"
-                class="px-4 py-2 text-xs font-bold rounded transition-all whitespace-nowrap">
+                class="px-4 py-2 text-xs font-bold rounded transition-all whitespace-nowrap flex items-center gap-2">
                 {{ filter.label }}
+                <span class="px-1.5 py-0.5 rounded-full bg-zinc-800 text-[10px] min-w-[1.25rem] text-center" 
+                      [class.bg-zinc-700]="activeFilter() === filter.value"
+                      [class.text-zinc-400]="activeFilter() !== filter.value">
+                  {{ filter.count }}
+                </span>
               </button>
             }
           </div>
@@ -59,7 +64,7 @@ type FilterType = 'all' | 'high-opportunity' | 'trending' | 'high-volume';
             <span class="text-xs text-zinc-500 font-medium">Sort by:</span>
             <select 
               [ngModel]="sortBy()"
-              (ngModelChange)="sortBy.set($event)"
+              (ngModelChange)="onSortChange($event)"
               class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-sm rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
               <option value="tradability">Tradability Score</option>
               <option value="volume">Volume</option>
@@ -224,16 +229,20 @@ export default class OraclePage {
   public loading = signal(false);
   public sortBy = signal<SortField>('tradability');
   public activeFilter = signal<FilterType>('all');
-
-  public filters: { value: FilterType; label: string }[] = [
-    { value: 'all', label: 'All Items' },
-    { value: 'high-opportunity', label: '🔥 High Opportunity' },
-    { value: 'trending', label: '📈 Trending' },
-    { value: 'high-volume', label: '💰 High Volume' },
-  ];
+  public userHasManuallySorted = signal(false);
 
   public analysisResource = resource({
     loader: () => this.trpc.market.getOracleAnalysis.query()
+  });
+
+  public filters = computed(() => {
+    const items = this.analysisResource.value() ?? [];
+    return [
+      { value: 'all', label: 'All Items', count: items.length },
+      { value: 'high-opportunity', label: '🔥 High Opportunity', count: items.filter(i => i.tradabilityScore >= 50).length },
+      { value: 'trending', label: '📈 Trending', count: items.filter(i => i.trendDirection !== 'sideways').length },
+      { value: 'high-volume', label: '💰 High Volume', count: items.filter(i => i.volumeScore >= 50).length },
+    ] as { value: FilterType; label: string; count: number }[];
   });
 
   public filteredAndSortedItems = computed(() => {
@@ -274,6 +283,32 @@ export default class OraclePage {
   // Trade Modal
   public tradeModalOpen = signal(false);
   public selectedItem = signal<any>(null);
+
+  setFilter(filter: FilterType) {
+    this.activeFilter.set(filter);
+    
+    // Auto-sort based on filter if user hasn't manually changed it
+    if (!this.userHasManuallySorted()) {
+      switch (filter) {
+        case 'high-opportunity':
+          this.sortBy.set('tradability');
+          break;
+        case 'trending':
+          this.sortBy.set('change');
+          break;
+        case 'high-volume':
+          this.sortBy.set('volume');
+          break;
+        default:
+          this.sortBy.set('tradability');
+      }
+    }
+  }
+
+  onSortChange(field: SortField) {
+    this.sortBy.set(field);
+    this.userHasManuallySorted.set(true);
+  }
 
   openTrade(item: any) {
     // Transform to match MarketItem interface for CreateOrderComponent
