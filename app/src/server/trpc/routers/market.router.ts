@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { publicProcedure, router } from '../trpc';
 import { poeNinjaService } from '../../services/poe-ninja.service';
+import { gggCurrencyService } from '../../services/ggg-currency.service';
 import { prisma } from '../../db';
 import { TRPCError } from '@trpc/server';
 
@@ -222,7 +223,13 @@ export const marketRouter = router({
 
   updateAll: publicProcedure
     .mutation(async () => {
-      await poeNinjaService.updateAll();
+      console.log('Starting market update (GGG Only)...');
+      // Run both updates. GGG is authoritative for rates where matches exist.
+      // PoeNinja handles images and metadata.
+      await Promise.allSettled([
+        // poeNinjaService.updateAll(),
+        gggCurrencyService.updateMarketData()
+      ]);
       return { success: true };
     }),
 

@@ -98,6 +98,13 @@ model MarketPair {
   currencyId   String // "divine", "exalted"
   rate         Float
   volume       Float
+  
+  // Deep Market Data
+  minRate      Float           @default(0)
+  maxRate      Float           @default(0)
+  lowestStock  Int             @default(0)
+  highestStock Int             @default(0)
+
   history      MarketHistory[]
 
   @@unique([marketItemId, currencyId])
@@ -110,6 +117,12 @@ model MarketHistory {
   timestamp    DateTime
   rate         Float
   volume       Float
+
+  // Deep Market Data
+  minRate      Float           @default(0)
+  maxRate      Float           @default(0)
+  lowestStock  Int             @default(0)
+  highestStock Int             @default(0)
 
   @@index([marketPairId, timestamp])
 }
